@@ -60,38 +60,48 @@ export function calcMMenosAtAluno(
 export type NotaEncontroInput = {
   notaTutor:         number | 'SATISFATORIO' | null
   mediaInterpares:   number | null
-  /** null = aluno não avaliou (faltou) → tratado como 0,0 na fórmula */
+  /**
+   * null = aluno não avaliou (faltou) → tratado como 0,0
+   * null = interpares sem avaliações → tratado como 0,0
+   */
   notaAutoAvaliacao: number | null
 }
 
 /**
- * Fórmula principal do encontro:
+ * Fórmula única do encontro:
  *
  *   (interpares×0,5 + auto_aval×0,5 + professor×4) / 5
  *
- * REGRA: auto-avaliação ausente (aluno faltou) = 0,0
- * Não existe o caso de "sem auto-avaliação" — se o aluno não avaliou,
- * recebe zero na auto-avaliação e a fórmula continua a mesma.
+ * REGRA DO ALUNO FALTOSO:
+ *   - Se o aluno faltou, ele NÃO submete auto-avaliação → auto = 0
+ *   - Os outros alunos NÃO avaliam o faltoso (ou avaliam com 0) → interpares = 0
+ *   - O professor lança 0 para o faltoso → notaTutor = 0
+ *   - Resultado: (0×0,5 + 0×0,5 + 0×4) / 5 = 0,00
  *
  * Retorna:
+ *   null           — SOMENTE quando o professor ainda não lançou nota
+ *                    (dados insuficientes, encontro sem registro)
  *   'SATISFATORIO' — atividade compensatória marcada pelo professor
- *   null           — dados insuficientes (sem nota do tutor ou sem interpares)
- *   number         — nota calculada (0 – 5)
+ *   number         — nota calculada (0,00 a 5,00)
  */
 export function calcNotaEncontro(
   params: NotaEncontroInput
 ): number | 'SATISFATORIO' | null {
   const { notaTutor, mediaInterpares, notaAutoAvaliacao } = params
 
-  if (notaTutor === null)       return null
-  if (mediaInterpares === null) return null
+  // Sem nota do professor = encontro sem dados ainda (professor não lançou)
+  if (notaTutor === null) return null
 
+  // Atividade compensatória
   if (notaTutor === 'SATISFATORIO') return 'SATISFATORIO'
 
-  // Auto-avaliação ausente (aluno faltou) → trata como 0,0
-  const autoAval = notaAutoAvaliacao ?? 0
+  // Interpares nulo = nenhum colega avaliou o faltoso → 0
+  const inter = mediaInterpares ?? 0
 
-  return (mediaInterpares * 0.5 + autoAval * 0.5 + notaTutor * 4) / 5
+  // Auto-avaliação nula = faltoso não avaliou a si mesmo → 0
+  const auto  = notaAutoAvaliacao ?? 0
+
+  return (inter * 0.5 + auto * 0.5 + notaTutor * 4) / 5
 }
 
 // ─────────────────────────────────────────────────────────────────

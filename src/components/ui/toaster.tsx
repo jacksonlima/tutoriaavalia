@@ -3,12 +3,13 @@
 import { useState, useCallback } from 'react'
 
 type Toast = { id: string; title: string; description?: string; variant?: 'default' | 'destructive' }
-type ToastFn = (t: Omit<Toast, 'id'>) => void
+type ToastInput = Omit<Toast, 'id'>
+type ToastFn = (t: ToastInput) => void
 
 let toastFn: ToastFn | null = null
 
 export function useToast() {
-  const toast: ToastFn = useCallback((t) => {
+  const toast: ToastFn = useCallback((t: ToastInput) => {
     if (toastFn) toastFn(t)
   }, [])
   return { toast }
@@ -17,7 +18,7 @@ export function useToast() {
 export function Toaster() {
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  toastFn = useCallback((t) => {
+  toastFn = useCallback((t: ToastInput) => {
     const id = Math.random().toString(36).slice(2)
     setToasts((prev) => [...prev, { ...t, id }])
     setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 3500)
@@ -30,7 +31,7 @@ export function Toaster() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`rounded-xl px-4 py-3 shadow-lg text-sm font-medium flex items-start gap-2 animate-in slide-in-from-bottom-2 ${
+          className={`rounded-xl px-4 py-3 shadow-lg text-sm font-medium flex items-start gap-2 ${
             t.variant === 'destructive'
               ? 'bg-red-600 text-white'
               : 'bg-[#1F4E79] text-white'
