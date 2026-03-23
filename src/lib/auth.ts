@@ -3,11 +3,12 @@ import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
 import { Papel } from '@prisma/client'
 
-// Lê os domínios permitidos
-const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAIN ?? '')
-  .split(',')
-  .map((d) => d.trim().toLowerCase())
-  .filter(Boolean)
+// Lê os domínios permitidos diretamente em runtime (não em cache de módulo)
+const getAllowedDomains = () =>
+  (process.env.ALLOWED_EMAIL_DOMAIN ?? '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -60,11 +61,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       if (!user.email) return false
 
-      // Verifica domínio se ALLOWED_EMAIL_DOMAIN estiver configurado
+      // Verifica domínio lendo a variável AGORA (não do cache do módulo)
+      const allowedDomains = getAllowedDomains()
       if (allowedDomains.length > 0) {
         const emailDomain = (user.email.split('@')[1] ?? '').toLowerCase()
         if (!allowedDomains.includes(emailDomain)) {
-          console.warn(`[auth] Login bloqueado: ${user.email}`)
+          console.warn(`[auth] Login bloqueado: ${user.email} — domínios: ${allowedDomains.join(', ')}`)
           return false
         }
       }
@@ -87,11 +89,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             googleSub: account?.providerAccountId ?? null,
           },
         })
-        return true
       } catch (err) {
-        console.error('[auth] Erro ao salvar usuário no banco:', err)
-        return false
+        // Erro no banco NÃO bloqueia o login — o usuário ainda pode entrar.
+        // O papel será buscado novamente no callback jwt.
+        console.error('[auth] Aviso: erro ao salvar usuário no banco:', err)
       }
+      return true
     },
 
     // Constrói o JWT com os dados do usuário do banco

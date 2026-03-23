@@ -49,12 +49,19 @@ export default async function LoginPage({
         {/* Mensagens de erro */}
         {erro === 'AccessDenied' && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-sm text-red-700">
-            Acesso negado. Use o email institucional da sua organização.
+            <p className="font-semibold mb-1">Acesso negado</p>
+            <p>Apenas emails do domínio autorizado podem acessar. Verifique se está usando o email institucional correto.</p>
           </div>
         )}
-        {erro && erro !== 'AccessDenied' && (
+        {erro === 'DatabaseError' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-6 text-sm text-orange-700">
+            <p className="font-semibold mb-1">Erro de conexão</p>
+            <p>Não foi possível conectar ao banco de dados. Verifique a variável DATABASE_URL na Vercel.</p>
+          </div>
+        )}
+        {erro && erro !== 'AccessDenied' && erro !== 'DatabaseError' && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6 text-sm text-red-700">
-            Erro ao entrar ({erro}). Tente novamente.
+            Erro ao entrar: <span className="font-mono">{erro}</span>. Tente novamente.
           </div>
         )}
 
