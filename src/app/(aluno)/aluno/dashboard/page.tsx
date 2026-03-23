@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/ui/TopBar'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AlunoDashboard() {
   const session = await auth()
   if (!session || session.user.papel !== 'ALUNO') redirect('/login')

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { avaliacaoTutorSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/avaliacoes/tutor
 // Salva (rascunho) ou finaliza as notas do tutor para um problema/encontro
 export async function POST(req: NextRequest) {

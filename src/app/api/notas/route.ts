@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { calcMMenosAtTutor, calcMMenosAtAluno, calcNotaEncontro, arredondar } from '@/lib/notas'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session || session.user.papel !== 'TUTOR') {

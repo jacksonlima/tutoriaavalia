@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { TopBar } from '@/components/ui/TopBar'
 import { calcMMenosAtTutor, calcMMenosAtAluno, calcNotaEncontro, arredondar, fmt2 } from '@/lib/notas'
 
+export const dynamic = 'force-dynamic'
+
 interface Props { searchParams: Promise<{ moduloId?: string }> }
 
 export default async function RelatoriosPage({ searchParams }: Props) {

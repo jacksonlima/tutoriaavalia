@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { avaliacaoAlunoSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/avaliacoes/aluno
 // Salva as avaliações E trava definitivamente (imutável após submissão)
 export async function POST(req: NextRequest) {

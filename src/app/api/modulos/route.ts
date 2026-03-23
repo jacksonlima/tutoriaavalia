@@ -4,6 +4,8 @@ import { criarModuloSchema } from '@/lib/validations'
 import { Papel } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/modulos
 export async function GET() {
   const session = await auth()

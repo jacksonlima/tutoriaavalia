@@ -2,6 +2,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/usuarios/buscar?q=texto
 // Busca usuários pelo nome ou email (para autocomplete no formulário de módulo)
 // Acessível apenas para tutores

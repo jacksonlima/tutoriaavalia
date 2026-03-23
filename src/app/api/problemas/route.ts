@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { ativarEncontroSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // PATCH /api/problemas — ativa ou desativa qualquer tipo de encontro
 export async function PATCH(req: NextRequest) {
   const session = await auth()
