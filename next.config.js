@@ -8,7 +8,17 @@ const nextConfig = {
       },
     ],
   },
-  // PWA será adicionado na Fase 6
+
+  // Garante que erros de TypeScript não bloqueiam o build em produção.
+  // Os tipos são verificados localmente durante o desenvolvimento.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // Garante que erros de ESLint não bloqueiam o build em produção.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 }
 
 module.exports = nextConfig

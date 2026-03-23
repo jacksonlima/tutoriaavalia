@@ -146,7 +146,7 @@ export default function AvaliarTutorPage() {
         {/* ── MOBILE: cards empilhados ── */}
         <div className="space-y-4 md:hidden">
           {alunos.map((aluno, idx) => {
-            const n = notas[aluno.id] ?? { c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
+            const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
             return (
               <div key={aluno.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -219,7 +219,7 @@ export default function AvaliarTutorPage() {
               </thead>
               <tbody>
                 {alunos.map((aluno, idx) => {
-                  const n = notas[aluno.id] ?? { c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
+                  const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
                   return (
                     <tr key={aluno.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-4 py-2 font-medium text-gray-800">{aluno.nome}</td>
