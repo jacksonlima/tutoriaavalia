@@ -1,6 +1,8 @@
 import { auth, signIn } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 // Next.js 15: searchParams é uma Promise — precisa ser await-ada
 export default async function LoginPage({
   searchParams,
