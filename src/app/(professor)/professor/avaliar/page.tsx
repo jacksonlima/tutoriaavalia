@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { TopBar } from '@/components/ui/TopBar'
@@ -46,7 +46,7 @@ function DropdownNota({
   )
 }
 
-export default function AvaliarTutorPage() {
+function AvaliarTutorPageInner() {
   const { data: session } = useSession()
   const searchParams      = useSearchParams()
   const router            = useRouter()
@@ -273,5 +273,20 @@ export default function AvaliarTutorPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AvaliarTutorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <AvaliarTutorPageInner />
+    </Suspense>
   )
 }

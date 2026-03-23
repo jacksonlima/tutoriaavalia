@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/ui/TopBar'
@@ -30,7 +30,7 @@ function DropdownNota({
   )
 }
 
-export default function AlunoAvaliarPage() {
+function AlunoAvaliarPageInner() {
   const { data: session } = useSession()
   const params  = useSearchParams()
   const router  = useRouter()
@@ -433,5 +433,20 @@ export default function AlunoAvaliarPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AlunoAvaliarPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <AlunoAvaliarPageInner />
+    </Suspense>
   )
 }
