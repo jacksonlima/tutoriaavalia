@@ -274,7 +274,7 @@ export default function NovoModuloPage() {
                           <span className="text-xs text-gray-400">P{String(numProb).padStart(2, '0')}</span>
                           {comSalto && <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">ST</span>}
                         </div>
-                        <input {...register('nomesProblemas.' + i)}
+                        <input {...register(('nomesProblemas.' + i) as any)}
                           placeholder={'Problema ' + String(numProb).padStart(2, '0')}
                           className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#2E75B6]" />
                       </div>
