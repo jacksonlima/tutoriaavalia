@@ -1,17 +1,9 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'
-import { prisma } from '@/lib/db'
 import { Papel } from '@prisma/client'
 
-// Força Node.js runtime — necessário para o Prisma funcionar com NextAuth v5
-export const runtime = 'nodejs'
-
-// Lê os domínios permitidos do .env.local
-// Aceita um ou mais domínios separados por vírgula:
-//   Um domínio:  ALLOWED_EMAIL_DOMAIN=prof.cesupa.br
-//   Múltiplos:   ALLOWED_EMAIL_DOMAIN=prof.cesupa.br,gmail.com
-// Se vazio ou ausente, QUALQUER email Google é aceito (útil para testes locais)
+// Lê os domínios permitidos
 const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAIN ?? '')
   .split(',')
   .map((d) => d.trim().toLowerCase())
@@ -25,8 +17,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
 
     // Provider de desenvolvimento — só funciona quando NODE_ENV=development
-    // Permite logar com qualquer email sem Google OAuth, para testes locais.
-    // Em produção este provider é ignorado (retorna null).
     ...(process.env.NODE_ENV === 'development'
       ? [
           Credentials({
@@ -36,18 +26,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: { label: 'Email', type: 'text' },
             },
             async authorize(credentials) {
-              const email = (credentials?.email as string ?? '').trim().toLowerCase()
+              const email = ((credentials?.email as string) ?? '').trim().toLowerCase()
               if (!email) return null
 
-              // Busca o usuário no banco — não cria, apenas autentica quem já existe
+              // Import dinâmico — nunca executado durante o build
+              const { prisma } = await import('@/lib/db')
               const usuario = await prisma.usuario.findUnique({
                 where:  { email },
                 select: { id: true, email: true, nome: true, papel: true },
               })
 
               if (!usuario) return null
-
-              // Retorna no formato que o NextAuth espera para o objeto User
               return {
                 id:    usuario.id,
                 email: usuario.email,
@@ -59,31 +48,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : []),
   ],
+
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
     error:  '/login',
   },
+
   callbacks: {
-    // ── signIn ──────────────────────────────────────────────────────
-    // Chamado logo após o Google autenticar.
-    // Retorna true → prossegue. Retorna false → mostra AccessDenied.
+    // Chamado após o Google autenticar. Salva o usuário no banco.
     async signIn({ user, account }) {
       if (!user.email) return false
 
-      // Verifica domínio APENAS se ALLOWED_EMAIL_DOMAIN estiver configurado
+      // Verifica domínio se ALLOWED_EMAIL_DOMAIN estiver configurado
       if (allowedDomains.length > 0) {
         const emailDomain = (user.email.split('@')[1] ?? '').toLowerCase()
         if (!allowedDomains.includes(emailDomain)) {
-          console.warn(
-            `[auth] Login bloqueado: ${user.email} — domínios permitidos: ${allowedDomains.join(', ')}`
-          )
+          console.warn(`[auth] Login bloqueado: ${user.email}`)
           return false
         }
       }
 
-      // Cria ou atualiza o usuário na tabela 'usuarios'
+      // Import dinâmico — o Prisma só é carregado em runtime, nunca no build
       try {
+        const { prisma } = await import('@/lib/db')
         await prisma.usuario.upsert({
           where:  { email: user.email },
           update: {
@@ -94,7 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           create: {
             email:     user.email,
             nome:      user.name      ?? user.email.split('@')[0],
-            papel:     Papel.ALUNO, // padrão: ALUNO. Tutor é definido via seed/Prisma Studio.
+            papel:     Papel.ALUNO,
             avatarUrl: user.image     ?? null,
             googleSub: account?.providerAccountId ?? null,
           },
@@ -106,17 +94,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
 
-    // ── jwt ─────────────────────────────────────────────────────────
-    // Chamado em toda requisição autenticada para construir/renovar o token.
-    // Busca o papel no banco APENAS quando o token ainda não tem papel.
+    // Constrói o JWT com os dados do usuário do banco
     async jwt({ token }) {
-      // Token já completo → devolve sem query no banco
       if (token.id && token.papel) return token
-
-      // Token incompleto → busca papel pelo email
       if (!token.email) return token
 
       try {
+        const { prisma } = await import('@/lib/db')
         const dbUser = await prisma.usuario.findUnique({
           where:  { email: token.email as string },
           select: { id: true, papel: true, nome: true },
@@ -127,16 +111,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.nome  = dbUser.nome
         }
       } catch (err) {
-        // Banco indisponível — devolve token sem papel.
-        // O middleware trata esse caso (deixa passar sem redirecionar).
         console.error('[auth] Erro ao buscar papel no banco:', err)
       }
 
       return token
     },
 
-    // ── session ─────────────────────────────────────────────────────
-    // Expõe os campos do token na sessão acessível pelo cliente React.
+    // Expõe os campos do token na sessão do cliente
     async session({ session, token }) {
       if (session.user) {
         session.user.id    = (token.id    as string) ?? ''
@@ -149,7 +130,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-// Extensão de tipos: adiciona os campos customizados à Session do NextAuth
+// Extensão de tipos para a Session do NextAuth
 declare module 'next-auth' {
   interface Session {
     user: {
