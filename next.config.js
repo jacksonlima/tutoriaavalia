@@ -9,7 +9,7 @@ const nextConfig = {
     ],
   },
 
-  // Garante que erros de TypeScript e ESLint não bloqueiam o build
+  // Ignora erros de TypeScript e ESLint no build
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -17,12 +17,10 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Diz ao Next.js para NÃO tentar bundlar o Prisma Client durante o build.
-  // Sem isso, o Next.js tenta analisar estaticamente as rotas que usam Prisma
-  // e falha com "Failed to collect page data" porque não há banco disponível
-  // no momento do build.
+  // Prisma e NextAuth precisam rodar no Node.js runtime, não no Edge runtime
+  // Isso impede o Next.js de tentar bundlar o @prisma/client durante o build
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'bcryptjs'],
   },
 }
 

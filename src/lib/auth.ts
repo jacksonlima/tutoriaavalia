@@ -4,6 +4,9 @@ import Credentials from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/db'
 import { Papel } from '@prisma/client'
 
+// Força Node.js runtime — necessário para o Prisma funcionar com NextAuth v5
+export const runtime = 'nodejs'
+
 // Lê os domínios permitidos do .env.local
 // Aceita um ou mais domínios separados por vírgula:
 //   Um domínio:  ALLOWED_EMAIL_DOMAIN=prof.cesupa.br
