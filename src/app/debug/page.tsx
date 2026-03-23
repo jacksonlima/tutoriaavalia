@@ -1,11 +1,11 @@
 // Página de diagnóstico — REMOVA em produção
 // Acesse: http://localhost:3000/debug
 import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DebugPage() {
+  const { prisma } = await import('@/lib/db')
   const session = await auth()
 
   let dbUser = null

@@ -1,5 +1,4 @@
 import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { TopBar } from '@/components/ui/TopBar'
@@ -7,6 +6,7 @@ import { TopBar } from '@/components/ui/TopBar'
 export const dynamic = 'force-dynamic'
 
 export default async function ModulosArquivadosPage() {
+  const { prisma } = await import('@/lib/db')
   const session = await auth()
   if (!session || session.user.papel !== 'TUTOR') redirect('/login')
 

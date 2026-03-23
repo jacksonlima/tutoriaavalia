@@ -1,6 +1,5 @@
 import React from 'react'
 import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { TopBar } from '@/components/ui/TopBar'
 import { calcMMenosAtTutor, calcMMenosAtAluno, calcNotaEncontro, arredondar, fmt2 } from '@/lib/notas'
@@ -10,6 +9,7 @@ export const dynamic = 'force-dynamic'
 interface Props { searchParams: Promise<{ moduloId?: string }> }
 
 export default async function RelatoriosPage({ searchParams }: Props) {
+  const { prisma } = await import('@/lib/db')
   const session = await auth()
   if (!session || session.user.papel !== 'TUTOR') redirect('/login')
 

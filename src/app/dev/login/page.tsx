@@ -4,7 +4,6 @@
  * Acesso: http://localhost:3000/dev/login
  */
 
-import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +12,7 @@ export default async function DevLoginPage({
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
+  const { prisma } = await import('@/lib/db')
   // Bloqueia em producao
   if (process.env.NODE_ENV !== 'development') {
     return (
