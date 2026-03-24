@@ -59,19 +59,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     // Chamado após o Google autenticar. Salva o usuário no banco.
     async signIn({ user, account }) {
-      if (!user.email) return false
+      // LOG DETALHADO — ajuda a depurar problemas de login em produção
+      console.log('[auth][signIn] email recebido do Google:', user.email)
+      console.log('[auth][signIn] ALLOWED_EMAIL_DOMAIN:', process.env.ALLOWED_EMAIL_DOMAIN ?? '(vazio)')
 
-      // Verifica domínio lendo a variável AGORA (não do cache do módulo)
-      const allowedDomains = getAllowedDomains()
-      if (allowedDomains.length > 0) {
-        const emailDomain = (user.email.split('@')[1] ?? '').toLowerCase()
-        if (!allowedDomains.includes(emailDomain)) {
-          console.warn(`[auth] Login bloqueado: ${user.email} — domínios: ${allowedDomains.join(', ')}`)
-          return false
-        }
+      if (!user.email) {
+        console.error('[auth][signIn] BLOQUEADO — email vazio')
+        return false
       }
 
-      // Import dinâmico — o Prisma só é carregado em runtime, nunca no build
+      // Verifica domínio
+      const allowedDomains = getAllowedDomains()
+      console.log('[auth][signIn] domínios permitidos:', allowedDomains)
+
+      if (allowedDomains.length > 0) {
+        const emailDomain = (user.email.split('@')[1] ?? '').toLowerCase()
+        console.log('[auth][signIn] domínio do email:', emailDomain)
+        if (!allowedDomains.includes(emailDomain)) {
+          console.error(`[auth][signIn] BLOQUEADO — domínio '${emailDomain}' não está em [${allowedDomains.join(', ')}]`)
+          return false
+        }
+      } else {
+        console.log('[auth][signIn] sem restrição de domínio — qualquer email aceito')
+      }
+
+      // Salva no banco (erro não bloqueia o login)
       try {
         const { prisma } = await import('@/lib/db')
         await prisma.usuario.upsert({
@@ -89,11 +101,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             googleSub: account?.providerAccountId ?? null,
           },
         })
+        console.log('[auth][signIn] usuário salvo no banco:', user.email)
       } catch (err) {
-        // Erro no banco NÃO bloqueia o login — o usuário ainda pode entrar.
-        // O papel será buscado novamente no callback jwt.
-        console.error('[auth] Aviso: erro ao salvar usuário no banco:', err)
+        console.error('[auth][signIn] erro ao salvar no banco (não bloqueia login):', err)
       }
+
+      console.log('[auth][signIn] APROVADO:', user.email)
       return true
     },
 
