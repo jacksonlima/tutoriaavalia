@@ -1,28 +1,37 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export default auth((req) => {
-  const { nextUrl, auth: session } = req
+// O middleware NUNCA deve usar Prisma — roda no Edge Runtime
+// Usa apenas o JWT token que já contém o papel do usuário
+
+export async function middleware(req: NextRequest) {
+  const { nextUrl } = req
   const { pathname } = nextUrl
 
   // ── Rotas que nunca são bloqueadas ──────────────────────────────
   if (
-    pathname.startsWith('/api/auth') || // callbacks do NextAuth
-    pathname.startsWith('/api/dev')  || // dev login (só em development)
-    pathname.startsWith('/dev')      || // dev pages (só em development)
-    pathname.startsWith('/_next')    || // assets do Next.js
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/dev')  ||
+    pathname.startsWith('/dev')      ||
+    pathname.startsWith('/_next')    ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next()
   }
 
-  const isLoggedIn  = !!session?.user
-  const papel       = session?.user?.papel  // 'TUTOR' | 'ALUNO' | null | undefined
+  // Lê o JWT diretamente — sem tocar no banco, sem Prisma
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+
+  const isLoggedIn  = !!token
+  const papel       = token?.papel as string | undefined
   const isLoginPage = pathname === '/login'
 
   // ── Não logado ────────────────────────────────────────────────
   if (!isLoggedIn) {
-    if (isLoginPage) return NextResponse.next() // deixa a página de login renderizar
+    if (isLoginPage) return NextResponse.next()
     const url = new URL('/login', nextUrl.origin)
     if (!pathname.startsWith('/login')) {
       url.searchParams.set('callbackUrl', pathname)
@@ -30,37 +39,29 @@ export default auth((req) => {
     return NextResponse.redirect(url)
   }
 
-  // ── Logado ────────────────────────────────────────────────────
-
-  // Se está na página de login, redireciona para o dashboard correto
+  // ── Logado na página de login → redireciona pro dashboard ─────
   if (isLoginPage) {
-    if (papel === 'TUTOR')  return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
-    if (papel === 'ALUNO')  return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
-    // papel ainda não carregou (banco lento): deixa o login renderizar
-    // o jwt callback vai popular na próxima requisição
+    if (papel === 'TUTOR') return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
+    if (papel === 'ALUNO') return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
     return NextResponse.next()
   }
 
-  // Se o papel ainda não está no token (ex: banco lento no login inicial)
-  // permite a requisição passar — o jwt callback vai resolver
+  // ── Papel ainda não está no token (banco lento) → deixa passar ─
   if (!papel) {
     return NextResponse.next()
   }
 
   // ── Proteção por papel ────────────────────────────────────────
-  const isProfRoute = pathname.startsWith('/professor')
-  const isAlunoRoute = pathname.startsWith('/aluno')
-
-  if (isProfRoute && papel !== 'TUTOR') {
+  if (pathname.startsWith('/professor') && papel !== 'TUTOR') {
     return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
   }
 
-  if (isAlunoRoute && papel !== 'ALUNO') {
+  if (pathname.startsWith('/aluno') && papel !== 'ALUNO') {
     return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)'],
