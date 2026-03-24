@@ -7,8 +7,6 @@ export async function middleware(req: NextRequest) {
 
   // ── Rotas públicas — nunca bloqueadas ───────────────────────────
   if (
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/api/dev')  ||
     pathname.startsWith('/api/')     ||
     pathname.startsWith('/dev')      ||
     pathname.startsWith('/_next')    ||
@@ -17,14 +15,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Lê o JWT — sem Prisma, sem banco
+  // NextAuth v5 (auth.js) usa cookie 'authjs.session-token'
+  // Em produção HTTPS usa '__Secure-authjs.session-token'
+  const isSecure = req.url.startsWith('https://')
+  const cookieName = isSecure
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token'
+
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret:     process.env.NEXTAUTH_SECRET,
+    cookieName: cookieName,
   })
 
-  const isLoggedIn  = !!token
-  const papel       = token?.papel as string | undefined
+  const isLoggedIn = !!token
+  const papel      = token?.papel as string | undefined
   const isLoginPage = pathname === '/login'
 
   // ── Não logado → vai para o login ─────────────────────────────
@@ -39,22 +44,18 @@ export async function middleware(req: NextRequest) {
   if (isLoginPage) {
     if (papel === 'TUTOR') return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
     if (papel === 'ALUNO') return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
-    // Papel ainda não carregado → deixa passar (a página vai resolver)
     return NextResponse.next()
   }
 
-  // ── Sem papel no token → deixa passar (banco ainda carregando) ──
+  // ── Sem papel → deixa passar (banco ainda carregando) ──────────
   if (!papel) {
     return NextResponse.next()
   }
 
   // ── Proteção por papel ─────────────────────────────────────────
-  // TUTOR tentando acessar área de aluno
   if (pathname.startsWith('/aluno') && papel === 'TUTOR') {
     return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
   }
-
-  // ALUNO tentando acessar área de professor
   if (pathname.startsWith('/professor') && papel === 'ALUNO') {
     return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
   }
