@@ -53,6 +53,16 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   // Edição inline de permissões
   const [editandoId,  setEditandoId]  = useState<string|null>(null)
   const [permsEdit,   setPermsEdit]   = useState<{problemaId:string;tipoEncontro:string}[]>([])
+  // Encontros Especiais
+  const [gerEE,         setGerEE]         = useState(false)
+  const [encontrosEsp,  setEncontrosEsp]  = useState<any[]>([])
+  const [eeAlunos,      setEeAlunos]      = useState<string[]>([])  // ids selecionados
+  const [eeModDest,     setEeModDest]     = useState('')             // moduloId destino
+  const [eeProblema,    setEeProblema]    = useState('')             // problemaId destino
+  const [eeTipo,        setEeTipo]        = useState('')             // tipoEncontro
+  const [eeObs,         setEeObs]         = useState('')
+  const [modulosAtivos, setModulosAtivos] = useState<any[]>([])
+  const [salvandoEE,    setSalvandoEE]    = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -227,6 +237,72 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     })
     setCoTutores((prev) => prev.filter((ct) => ct.tutorId !== tutorId))
     toast({ title: 'Substituto removido', description: nome })
+  }
+
+  // ── Encontros Especiais ────────────────────────────────────────
+  const abrirGerEE = async () => {
+    const novo = !gerEE
+    setGerEE(novo)
+    if (novo && encontrosEsp.length === 0) {
+      try {
+        const [eeRes, modRes] = await Promise.all([
+          fetch(`/api/encontros-especiais?moduloId=${modulo.id}`),
+          fetch('/api/modulos/ativos'),
+        ])
+        const eeData  = await eeRes.json()
+        const modData = await modRes.json()
+        if (Array.isArray(eeData))  setEncontrosEsp(eeData)
+        if (Array.isArray(modData)) setModulosAtivos(modData.filter((m: any) => m.id !== modulo.id))
+      } catch {}
+    }
+  }
+
+  const problemasDoDest = modulosAtivos.find((m: any) => m.id === eeModDest)?.problemas ?? []
+  const tiposParaProb = (prob: any) => {
+    if (!prob) return []
+    if (prob.temSaltoTriplo)
+      return [{ v: 'ABERTURA', l: 'Abertura' }, { v: 'FECHAMENTO_A', l: 'Fechamento A (ST)' }, { v: 'FECHAMENTO_B', l: 'Fechamento B (ST)' }]
+    return [{ v: 'ABERTURA', l: 'Abertura' }, { v: 'FECHAMENTO', l: 'Fechamento' }]
+  }
+  const probDest = problemasDoDest.find((p: any) => p.id === eeProblema)
+
+  const salvarEncontroEspecial = async () => {
+    if (!eeProblema || !eeTipo || eeAlunos.length === 0) {
+      toast({ title: 'Selecione aluno(s), problema destino e tipo de encontro', variant: 'destructive' }); return
+    }
+    setSalvandoEE(true)
+    try {
+      const alocacoes = eeAlunos.map((alunoId) => ({
+        alunoId,
+        problemaDestinoId: eeProblema,
+        tipoEncontro:      eeTipo,
+        observacao:        eeObs || null,
+      }))
+      const res  = await fetch('/api/encontros-especiais', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moduloOrigemId: modulo.id, alocacoes }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast({ title: 'Erro', description: data.error, variant: 'destructive' }); return }
+      setEncontrosEsp((prev) => {
+        const novos = Array.isArray(data) ? data : [data]
+        const semDup = prev.filter((e: any) => !novos.some(
+          (n: any) => n.alunoId === e.alunoId && n.problemaDestinoId === e.problemaDestinoId && n.tipoEncontro === e.tipoEncontro
+        ))
+        return [...semDup, ...novos]
+      })
+      setEeAlunos([]); setEeModDest(''); setEeProblema(''); setEeTipo(''); setEeObs('')
+      toast({ title: `✅ ${eeAlunos.length} aluno(s) alocado(s)` })
+    } finally { setSalvandoEE(false) }
+  }
+
+  const removerEncontroEspecial = async (id: string) => {
+    await fetch('/api/encontros-especiais', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ encontroEspecialId: id }),
+    })
+    setEncontrosEsp((prev) => prev.filter((e: any) => e.id !== id))
+    toast({ title: 'Encontro especial removido' })
   }
 
   return (
@@ -566,6 +642,20 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ── Encontros Especiais — apenas para titular ── */}
+          {isTitular && (
+            <a
+              href={`/professor/modulos/${modulo.id}/realocar`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center justify-between w-full border border-purple-200 rounded-xl px-4 py-2.5 bg-purple-50 hover:bg-purple-100 transition-colors text-sm"
+            >
+              <span className="font-medium text-purple-800">
+                🔄 Encontros Especiais
+              </span>
+              <span className="text-purple-400 text-xs">Gerenciar →</span>
+            </a>
           )}
 
           {/* Ações do módulo — apenas para titular */}

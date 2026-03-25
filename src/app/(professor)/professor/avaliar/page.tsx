@@ -88,11 +88,27 @@ function AvaliarTutorPageInner() {
           for (const m of modulos) {
             const prob = m.problemas?.find((p: any) => p.id === problemaId)
             if (prob) {
-              // Ordem garantida: API já retorna por numeraNaTurma asc
               const alunosDoModulo: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
-              setAlunos(alunosDoModulo)
+
+              // Busca alunos visitantes (encontros especiais apontando para este problema)
+              let visitantes: Aluno[] = []
+              try {
+                const eeRes  = await fetch(`/api/encontros-especiais/visitantes?problemaId=${problemaId}&tipoEncontro=${tipo}`)
+                const eeData = await eeRes.json()
+                if (Array.isArray(eeData)) visitantes = eeData
+              } catch {}
+
+              // Combina alunos do módulo + visitantes (sem duplicatas)
+              const todosIds = new Set(alunosDoModulo.map((a: Aluno) => a.id))
+              const visitantesNovos = visitantes.filter((v: Aluno) => !todosIds.has(v.id))
+              const todos: Aluno[] = [
+                ...alunosDoModulo,
+                ...visitantesNovos.map((v: Aluno) => ({ ...v, visitante: true } as any)),
+              ]
+
+              setAlunos(todos)
               const init: Record<string, NotaAluno> = {}
-              for (const a of alunosDoModulo) {
+              for (const a of todos) {
                 init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
               }
               setNotas(init)

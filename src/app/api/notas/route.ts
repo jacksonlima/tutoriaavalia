@@ -39,23 +39,37 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Avaliações do próprio módulo
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
     prisma.avaliacaoTutor.findMany({ where: { problema: { moduloId } } }),
     prisma.avaliacaoAluno.findMany({ where: { problema: { moduloId } } }),
   ])
 
-  // Para cada problema, quais tipos de encontro existem
-  // Problema normal: ABERTURA, FECHAMENTO
-  // Problema com Salto Triplo: ABERTURA, FECHAMENTO_A, FECHAMENTO_B
-  const calcNotaParaTipo = (
-    problemaId: string,
-    alunoId:    string,
-    tipo:       string
+  // Avaliações externas via encontros especiais (alunos redistribuídos)
+  const encontrosEspeciais = await prisma.encontroEspecial.findMany({
+    where:   { moduloOrigemId: moduloId },
+    select:  { alunoId: true, problemaDestinoId: true, tipoEncontro: true },
+  })
+
+  const problemasDestinoIds = [...new Set(encontrosEspeciais.map((e) => e.problemaDestinoId))]
+  const [avTutorExt, avAlunoExt] = problemasDestinoIds.length > 0
+    ? await Promise.all([
+        prisma.avaliacaoTutor.findMany({ where: { problemaId: { in: problemasDestinoIds } } }),
+        prisma.avaliacaoAluno.findMany({ where: { problemaId: { in: problemasDestinoIds } } }),
+      ])
+    : [[], []]
+
+  // Calcula nota de um encontro qualquer (interno ou externo)
+  const calcNotaParaProblema = (
+    problemaId:       string,
+    alunoId:          string,
+    tipo:             string,
+    tutorAvals:       typeof avaliacoesTutor,
+    alunoAvals:       typeof avaliacoesAluno,
   ): number | 'SATISFATORIO' | null => {
-    const avTutor = avaliacoesTutor.find(
+    const avTutor = tutorAvals.find(
       (a) => a.problemaId === problemaId && a.avaliadoId === alunoId && a.tipoEncontro === tipo
     )
-    // Basta a avaliação existir — finalizado foi descontinuado
     if (!avTutor) return null
 
     const notaTutor = calcMMenosAtTutor(
@@ -63,7 +77,7 @@ export async function GET(req: NextRequest) {
       Number(avTutor.atitudes), avTutor.ativCompensatoria
     )
 
-    const avSelf = avaliacoesAluno.find(
+    const avSelf = alunoAvals.find(
       (a) => a.problemaId === problemaId && a.avaliadorId === alunoId
           && a.avaliadoId === alunoId && a.tipoEncontro === tipo
     )
@@ -71,21 +85,36 @@ export async function GET(req: NextRequest) {
       ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes))
       : null
 
-    const avPares = avaliacoesAluno.filter(
+    const avPares = alunoAvals.filter(
       (a) => a.problemaId === problemaId && a.avaliadoId === alunoId
           && a.avaliadorId !== alunoId && a.tipoEncontro === tipo
     )
-    let mediaInterpares: number | null = null
-    if (avPares.length > 0) {
-      mediaInterpares = avPares.reduce(
-        (acc, a) => acc + calcMMenosAtAluno(Number(a.c1), Number(a.c2), Number(a.c3), Number(a.atitudes)), 0
-      ) / avPares.length
-    }
+    const mediaInterpares = avPares.length > 0
+      ? avPares.reduce((acc, a) => acc + calcMMenosAtAluno(Number(a.c1), Number(a.c2), Number(a.c3), Number(a.atitudes)), 0) / avPares.length
+      : null
 
     const nota = calcNotaEncontro({ notaTutor, mediaInterpares, notaAutoAvaliacao: notaSelf })
     if (nota === null)          return null
     if (nota === 'SATISFATORIO') return 'SATISFATORIO'
     return arredondar(nota)
+  }
+
+  // Wrapper: busca primeiro no módulo local, depois em encontros especiais
+  const calcNotaParaTipo = (
+    problemaId: string,
+    alunoId:    string,
+    tipo:       string
+  ): number | 'SATISFATORIO' | null => {
+    // Nota interna (problema do próprio módulo)
+    const notaInterna = calcNotaParaProblema(problemaId, alunoId, tipo, avaliacoesTutor, avaliacoesAluno)
+    if (notaInterna !== null) return notaInterna
+    // Nota externa (aluno foi redistribuído para outro módulo neste tipo de encontro)
+    const ee = encontrosEspeciais.find(
+      (e) => e.alunoId === alunoId && e.tipoEncontro === tipo
+      // Nota: para encontros especiais, qualquer problema externo com aquele tipo conta
+    )
+    if (!ee) return null
+    return calcNotaParaProblema(ee.problemaDestinoId, alunoId, tipo, avTutorExt as any, avAlunoExt as any)
   }
 
   const fmt = (v: any) => v === null ? null : v === 'SATISFATORIO' ? 'SAT' : v

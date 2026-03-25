@@ -42,6 +42,26 @@ export default async function AlunoDashboard() {
     where: { problemaId: { in: problemasIds }, avaliadorId: session.user.id },
   })
 
+  // Encontros especiais: este aluno foi redistribuído para outro módulo
+  const encontrosEspeciais = await prisma.encontroEspecial.findMany({
+    where: { alunoId: session.user.id, moduloOrigemId: matricula.moduloId },
+    include: {
+      problemaDestino: {
+        include: {
+          modulo: { select: { nome: true, tutoria: true, turma: true, tutor: { select: { nome: true } } } },
+        },
+      },
+    },
+  })
+
+  // Submissões dos encontros especiais
+  const problemasExternosIds = encontrosEspeciais.map((e) => e.problemaDestinoId)
+  const submissoesExternas = problemasExternosIds.length > 0
+    ? await prisma.submissao.findMany({
+        where: { problemaId: { in: problemasExternosIds }, avaliadorId: session.user.id },
+      })
+    : []
+
   const jaSubmeteu = (probId: string, tipo: string) =>
     submissoes.some((s) => s.problemaId === probId && s.tipoEncontro === tipo)
 
@@ -155,6 +175,65 @@ export default async function AlunoDashboard() {
             )
           })}
         </div>
+
+        {/* ── Encontros Especiais ────────────────────────────────── */}
+        {encontrosEspeciais.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-base font-bold text-[#1F4E79] mb-3 flex items-center gap-2">
+              🔄 Encontros Especiais
+              <span className="text-xs font-normal text-gray-400">
+                — você foi incluído temporariamente em outra tutoria
+              </span>
+            </h2>
+            <div className="space-y-3">
+              {encontrosEspeciais.map((ee) => {
+                const jaFez = submissoesExternas.some(
+                  (s) => s.problemaId === ee.problemaDestinoId && s.tipoEncontro === ee.tipoEncontro
+                )
+                const prob  = ee.problemaDestino
+                const mod   = prob.modulo
+                const label = ee.tipoEncontro === 'ABERTURA' ? 'Abertura'
+                  : ee.tipoEncontro === 'FECHAMENTO'   ? 'Fechamento'
+                  : ee.tipoEncontro === 'FECHAMENTO_A' ? 'Fechamento A'
+                  : 'Fechamento B'
+
+                return (
+                  <div key={ee.id}
+                    className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                            Encontro Especial
+                          </span>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            jaFez ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {jaFez ? '✓ Enviado' : '● Aguardando'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {label} — Prob. {prob.numero}{prob.nome ? ` — ${prob.nome}` : ''}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {mod.nome} · {mod.tutoria} · Turma {mod.turma} · Prof. {mod.tutor.nome}
+                        </p>
+                      </div>
+                      {!jaFez && (
+                        <a
+                          href={`/aluno/avaliar?problemaId=${ee.problemaDestinoId}&tipo=${ee.tipoEncontro}&externo=1`}
+                          className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap"
+                        >
+                          Avaliar →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )

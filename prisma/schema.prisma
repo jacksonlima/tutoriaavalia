@@ -40,6 +40,7 @@ model Usuario {
 
   modulosTutor        Modulo[]         @relation("Tutor")
   coTutorEm           CoTutor[]
+  encontrosEspeciais  EncontroEspecial[]
   matriculas          Matricula[]
   avaliacoesTutor     AvaliacaoTutor[]
   avaliacoesFeitas    AvaliacaoAluno[] @relation("Avaliador")
@@ -69,6 +70,7 @@ model Modulo {
   matriculas Matricula[]
   problemas  Problema[]
   coTutores  CoTutor[]
+  encontrosEspeciaisOrigem EncontroEspecial[] @relation("EncontrosEspeciaisOrigem")
 
   @@unique([ano, tutoria, turma, tutorId])
   @@map("modulos")
@@ -104,6 +106,33 @@ model CoTutorPermissao {
 
   @@unique([coTutorId, problemaId, tipoEncontro])
   @@map("co_tutor_permissoes")
+}
+
+// ─────────────────────────────────────────────
+// ENCONTROS ESPECIAIS (realocação temporária)
+// ─────────────────────────────────────────────
+// Quando um aluno do Módulo A é enviado temporariamente ao Módulo B
+// para participar de um encontro específico, esta tabela registra o vínculo.
+// As avaliações ficam no Módulo B; o cálculo da nota formativa do Módulo A
+// busca as avaliações externas via esta tabela.
+
+model EncontroEspecial {
+  id                String       @id @default(uuid())
+  alunoId           String       @map("aluno_id")
+  moduloOrigemId    String       @map("modulo_origem_id")    // módulo do aluno (Módulo A)
+  problemaDestinoId String       @map("problema_destino_id") // problema externo (Módulo B)
+  tipoEncontro      TipoEncontro @map("tipo_encontro")
+  observacao        String?      @map("observacao")          // motivo/observação do professor
+  criadoEm          DateTime     @default(now()) @map("criado_em")
+
+  aluno           Usuario  @relation(fields: [alunoId],           references: [id])
+  moduloOrigem    Modulo   @relation("EncontrosEspeciaisOrigem",   fields: [moduloOrigemId],    references: [id])
+  problemaDestino Problema @relation("EncontrosEspeciaisDestino",  fields: [problemaDestinoId], references: [id])
+
+  // Um aluno só pode ter UM destino por tipo de encontro por módulo de origem
+  // Garante que o mesmo aluno não seja enviado a dois lugares para a mesma abertura/fechamento
+  @@unique([alunoId, moduloOrigemId, tipoEncontro])
+  @@map("encontros_especiais")
 }
 
 // ─────────────────────────────────────────────
@@ -147,7 +176,8 @@ model Problema {
   avaliacoesTutor AvaliacaoTutor[]
   avaliacoesAluno AvaliacaoAluno[]
   submissoes      Submissao[]
-  coTutorPerms    CoTutorPermissao[]
+  coTutorPerms           CoTutorPermissao[]
+  encontrosEspeciaisDestino EncontroEspecial[] @relation("EncontrosEspeciaisDestino")
 
   @@unique([moduloId, numero])
   @@map("problemas")
