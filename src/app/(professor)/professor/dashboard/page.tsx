@@ -11,14 +11,37 @@ export default async function ProfessorDashboard() {
   const session = await auth()
   if (!session || session.user.papel !== 'TUTOR') redirect('/login')
 
-  const modulos = await prisma.modulo.findMany({
-    where: { tutorId: session.user.id, arquivado: false },
-    include: {
-      problemas: { orderBy: { numero: 'asc' } },
-      _count: { select: { matriculas: true } },
-    },
+  const include = {
+    problemas: { orderBy: { numero: 'asc' } },
+    _count: { select: { matriculas: true } },
+  } as const
+
+  // Módulos onde é titular
+  const modulosTitular = await prisma.modulo.findMany({
+    where:   { tutorId: session.user.id, arquivado: false },
+    include,
     orderBy: { criadoEm: 'desc' },
   })
+
+  // Módulos onde é co-tutor (substituto)
+  const coTutorEm = await prisma.coTutor.findMany({
+    where:   { tutorId: session.user.id },
+    include: {
+      modulo: {
+        include: {
+          ...include,
+          tutor: { select: { nome: true } },
+        },
+      },
+    },
+  })
+
+  // Filtra apenas módulos ativos e não arquivados onde é substituto
+  const modulosSubstituto = coTutorEm
+    .map((ct) => ct.modulo)
+    .filter((m) => !m.arquivado)
+
+  const totalModulos = modulosTitular.length + modulosSubstituto.length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -29,9 +52,9 @@ export default async function ProfessorDashboard() {
           <div>
             <h1 className="text-xl font-bold text-[#1F4E79]">Meus Módulos</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {modulos.length === 0
-                ? 'Nenhum módulo criado ainda'
-                : `${modulos.length} módulo${modulos.length > 1 ? 's' : ''}`}
+              {totalModulos === 0
+                ? 'Nenhum módulo disponível'
+                : `${totalModulos} módulo${totalModulos > 1 ? 's' : ''}`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -50,12 +73,12 @@ export default async function ProfessorDashboard() {
           </div>
         </div>
 
-        {modulos.length === 0 ? (
+        {totalModulos === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <div className="text-4xl mb-3">📚</div>
-            <h2 className="font-semibold text-gray-700 mb-1">Nenhum módulo criado</h2>
+            <h2 className="font-semibold text-gray-700 mb-1">Nenhum módulo disponível</h2>
             <p className="text-sm text-gray-400 mb-4">
-              Crie seu primeiro módulo para começar a avaliar os alunos.
+              Crie seu primeiro módulo ou aguarde ser adicionado como substituto.
             </p>
             <Link
               href="/professor/modulos/novo"
@@ -66,9 +89,28 @@ export default async function ProfessorDashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {modulos.map((modulo) => (
-              <ModuloCard key={modulo.id} modulo={modulo} />
+            {/* Módulos onde é titular */}
+            {modulosTitular.map((modulo) => (
+              <ModuloCard key={modulo.id} modulo={modulo} isTitular={true} />
             ))}
+
+            {/* Módulos onde é substituto */}
+            {modulosSubstituto.length > 0 && (
+              <>
+                {modulosTitular.length > 0 && (
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                      Como Substituto
+                    </span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                )}
+                {modulosSubstituto.map((modulo) => (
+                  <ModuloCard key={modulo.id} modulo={modulo as any} isTitular={false} />
+                ))}
+              </>
+            )}
           </div>
         )}
       </main>

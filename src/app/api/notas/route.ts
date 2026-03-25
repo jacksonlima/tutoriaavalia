@@ -25,8 +25,18 @@ export async function GET(req: NextRequest) {
       problemas: { orderBy: { numero: 'asc' } },
     },
   })
-  if (!modulo || modulo.tutorId !== session.user.id) {
+  // Verifica se é titular ou co-tutor
+  if (!modulo) {
     return NextResponse.json({ error: 'Modulo nao encontrado' }, { status: 404 })
+  }
+  if (modulo.tutorId !== session.user.id) {
+    const { prisma: p2 } = await import('@/lib/db')
+    const coTutor = await p2.coTutor.findUnique({
+      where: { moduloId_tutorId: { moduloId, tutorId: session.user.id } },
+    })
+    if (!coTutor) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
   }
 
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([

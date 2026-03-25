@@ -2,6 +2,18 @@ import { auth } from '@/lib/auth'
 import { Papel } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Verifica se userId é titular ou co-tutor do módulo
+async function isTitularOuCoTutor(prisma: any, moduloId: string, userId: string): Promise<boolean> {
+  const modulo = await prisma.modulo.findUnique({
+    where: { id: moduloId },
+    include: { coTutores: { where: { tutorId: userId } } },
+  })
+  if (!modulo) return false
+  if (modulo.tutorId === userId) return true
+  return modulo.coTutores.length > 0
+}
+
+
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/modulos/[id]  — arquivar ou excluir módulo
@@ -82,7 +94,12 @@ export async function GET(
     },
   })
 
-  if (!modulo || modulo.tutorId !== session.user.id) {
+  // GET: titular ou co-tutor podem ver o módulo
+  if (!modulo) {
+    return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
+  }
+  const podeVer = await isTitularOuCoTutor(prisma, moduloId, session.user.id)
+  if (!podeVer) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
 

@@ -2,6 +2,24 @@ import { auth } from '@/lib/auth'
 import { avaliacaoTutorSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
+
+// Verifica se o usuário logado é titular OU co-tutor do módulo do problema
+async function isTutorOuCoTutor(
+  prisma: any,
+  problemaId: string,
+  userId: string
+): Promise<boolean> {
+  const problema = await prisma.problema.findUnique({
+    where: { id: problemaId },
+    include: { modulo: { include: { coTutores: true } } },
+  })
+  if (!problema) return false
+  const modulo = problema.modulo
+  if (modulo.tutorId === userId) return true
+  return modulo.coTutores.some((ct: any) => ct.tutorId === userId)
+}
+
+
 export const dynamic = 'force-dynamic'
 
 // POST /api/avaliacoes/tutor
@@ -21,16 +39,9 @@ export async function POST(req: NextRequest) {
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
 
-  // Verifica que o problema pertence a um módulo deste tutor.
-  // IMPORTANTE: o professor salvar notas NÃO altera nenhum campo de ativação
-  // (aberturaAtiva, fechamentoAtivo etc.) — esses campos SÓ mudam pelo toggle
-  // no painel do professor. Salvar notas e ativar/desativar encontros são
-  // operações completamente independentes.
-  const problema = await prisma.problema.findUnique({
-    where:   { id: problemaId },
-    include: { modulo: true },
-  })
-  if (!problema || problema.modulo.tutorId !== session.user.id) {
+  // Verifica que o usuário é titular OU co-tutor (substituto) do módulo
+  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session.user.id)
+  if (!autorizado) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
   }
 
@@ -87,6 +98,12 @@ export async function GET(req: NextRequest) {
 
   if (!problemaId || !tipoEncontro) {
     return NextResponse.json({ error: 'problemaId e tipoEncontro são obrigatórios' }, { status: 400 })
+  }
+
+  // Verifica acesso: titular ou co-tutor
+  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session.user.id)
+  if (!autorizado) {
+    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
   const avaliacoes = await prisma.avaliacaoTutor.findMany({

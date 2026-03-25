@@ -1,85 +1,61 @@
 # TutoriaAvalia v2
 
 Sistema web de avaliação formativa para Aprendizagem Baseada em Problemas (ABP).  
-Mobile-first · Login Google · Banco de dados PostgreSQL · Sem Google Drive ou Sheets.
+Desenvolvido por **Jackson Lima** — CESUPA.  
+Mobile-first · Login Google OAuth · PostgreSQL (Neon) · Next.js 14 · Prisma · NextAuth v5.
 
 ---
 
-## ⚡ Instalação Rápida (MacBook Pro 2017)
+## ⚡ Instalação em outro computador
 
-### Pré-requisitos (instalar uma vez)
+### Pré-requisitos
 
-**1. Homebrew**
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+**1. Node.js 20+**  
+Baixe em [nodejs.org](https://nodejs.org) (versão LTS).  
+Verifique: `node --version` → deve mostrar `v20.x.x`
 
-**2. Node.js 20 e Git**
-```bash
-brew install node@20 git
-```
-Verifique: `node --version` deve mostrar `v20.x.x`
+**2. Git**  
+Baixe em [git-scm.com](https://git-scm.com)
 
 ---
 
-### Configurações externas necessárias
+### Configuração do projeto
 
-**3. Supabase (banco de dados gratuito)**
-- Acesse [supabase.com](https://supabase.com) → *Start your project*
-- Crie um projeto: nome `tutoriaavalia`, região *South America (São Paulo)*
-- Anote a senha do banco
-- Vá em **Settings → Database → Connection String (URI mode)**
-- Copie a string e substitua `[YOUR-PASSWORD]` pela sua senha
-
-**4. Google Cloud Console (autenticação)**
-- Acesse [console.cloud.google.com](https://console.cloud.google.com)
-- Crie um projeto chamado `tutoriaavalia`
-- **APIs e serviços → Biblioteca → ative: "Google+ API"**
-- **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth 2.0**
-- Tipo: *Aplicativo da Web*
-- URI de redirecionamento autorizado: `http://localhost:3000/api/auth/callback/google`
-- Copie o **Client ID** e o **Client Secret**
-
----
-
-### Instalação do projeto
-
-**5. Baixar e instalar dependências**
+**3. Clonar o repositório**
 ```bash
-cd ~/Documentos
-git clone https://github.com/SEU_USUARIO/tutoriaavalia.git
+git clone https://github.com/jacksonlima/tutoriaavalia.git
 cd tutoriaavalia
 npm install
 ```
 
-**6. Configurar variáveis de ambiente**
+**4. Criar o arquivo de variáveis de ambiente**
 ```bash
 cp .env.example .env.local
 ```
 
-Abra `.env.local` e preencha:
+Preencha o `.env.local` com suas credenciais:
 ```env
 GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=seu-client-secret
 NEXTAUTH_SECRET=   # gere com: openssl rand -base64 32
 NEXTAUTH_URL=http://localhost:3000
-DATABASE_URL=postgresql://postgres:SENHA@db.XXX.supabase.co:5432/postgres
-DIRECT_URL=postgresql://postgres:SENHA@db.XXX.supabase.co:5432/postgres
-ALLOWED_EMAIL_DOMAIN=suainstituicao.edu.br
+DATABASE_URL=postgresql://user:senha@ep-xxx-pooler.sa-east-1.aws.neon.tech/tutoriaavalia?sslmode=require
+DIRECT_DATABASE_URL=postgresql://user:senha@ep-xxx.sa-east-1.aws.neon.tech/tutoriaavalia?sslmode=require
+ALLOWED_EMAIL_DOMAIN=prof.cesupa.br
 ```
 
-**7. Criar tabelas no banco**
+**5. Criar as tabelas no banco**
 ```bash
-npx prisma migrate dev --name init
+npx prisma generate
+npx prisma db push
 ```
-Aguarde: *"Your database is now in sync with your schema"*
 
-**8. Popular com dados de teste**
+**6. Popular com dados de teste**
 ```bash
 npm run db:seed
 ```
 
-**9. Rodar o sistema**
+**7. Rodar o sistema**
 ```bash
 npm run dev
 ```
@@ -87,15 +63,24 @@ Acesse: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🔑 Contas de teste (após seed)
+## 🔑 Login de desenvolvimento
 
-| Email | Papel |
-|-------|-------|
-| `professor@suainstituicao.edu.br` | Professor (TUTOR) |
-| `ana1@suainstituicao.edu.br` | Aluno |
-| `bruno2@suainstituicao.edu.br` | Aluno |
+Para logar como aluno sem conta Google real, acesse:  
+`http://localhost:3000/dev/login`  
 
-> ⚠️ Ajuste os emails no arquivo `prisma/seed.ts` para seu domínio real.
+> ⚠️ Esta página só funciona em `npm run dev`. Em produção é bloqueada automaticamente.
+
+---
+
+## 🏗 Stack tecnológica
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS |
+| Autenticação | NextAuth.js v5 beta + Google OAuth |
+| Banco de dados | PostgreSQL via Neon (serverless) |
+| ORM | Prisma 5.22 |
+| Deploy | Vercel |
 
 ---
 
@@ -104,49 +89,67 @@ Acesse: [http://localhost:3000](http://localhost:3000)
 ```
 tutoriaavalia/
 ├── prisma/
-│   ├── schema.prisma     # Modelo de dados completo
-│   └── seed.ts           # Dados de teste
+│   ├── schema.prisma         # Modelo de dados
+│   ├── seed.ts               # Dados de teste
+│   └── migrations/           # Histórico de migrações
 ├── src/
 │   ├── app/
-│   │   ├── (auth)/login/ # Tela de login Google
-│   │   ├── (professor)/  # Dashboard, criar módulo, avaliar, relatórios
-│   │   ├── (aluno)/      # Dashboard e formulário de avaliação
-│   │   └── api/          # API REST: modulos, problemas, avaliacoes, notas
+│   │   ├── (auth)/login/     # Tela de login Google
+│   │   ├── (professor)/      # Dashboard, módulos, avaliar, relatórios
+│   │   ├── (aluno)/          # Dashboard e formulário de avaliação
+│   │   ├── dev/login/        # Login de desenvolvimento (sem Google)
+│   │   └── api/              # API REST
 │   ├── components/
-│   │   ├── ui/           # TopBar, Toaster
-│   │   └── professor/    # ModuloCard
+│   │   ├── ui/               # TopBar, Toaster, EmailAutocomplete
+│   │   └── professor/        # ModuloCard
 │   └── lib/
-│       ├── auth.ts       # NextAuth + Google OAuth
-│       ├── db.ts         # Prisma singleton
-│       ├── notas.ts      # Fórmulas migradas das planilhas
-│       └── validations.ts # Schemas Zod
-└── .env.local            # Suas credenciais (nunca commite!)
+│       ├── auth.ts           # NextAuth + Google OAuth
+│       ├── db.ts             # Prisma singleton
+│       ├── notas.ts          # Fórmulas de cálculo de notas
+│       ├── criterios.ts      # Critérios de avaliação
+│       └── validations.ts    # Schemas Zod
+├── .env.example              # Modelo de variáveis de ambiente
+└── .env.local                # Suas credenciais (nunca commite!)
 ```
 
 ---
 
 ## 🧮 Fórmulas implementadas
 
-Todas as fórmulas do Excel foram migradas para `src/lib/notas.ts`:
+Todas as fórmulas do Google Sheets foram migradas para `src/lib/notas.ts`:
 
-| Função | Equivale a |
-|--------|-----------|
-| `calcMedia(c1, c2, c3)` | `=AVERAGE(B4:D4)` |
-| `calcMMenosAtTutor(...)` | `=IF(H4=TRUE,"SATISFATÓRIO",(E4-F4))` |
-| `calcMMenosAtAluno(...)` | `=E4-F4` |
-| `calcNotaEncontro(...)` | Fórmula principal do Formativa.xlsx col. B |
-| `calcNotaFormativa(...)` | `=SUM(R4+S4)` do Resumo MT |
+| Função | Equivale no Sheets |
+|--------|-------------------|
+| `calcMedia(c1, c2, c3)` | `=MÉDIA(B4:D4)` |
+| `calcMMenosAtTutor(...)` | `=SE(comp;"SATISFATÓRIO";(M-atitudes))` |
+| `calcMMenosAtAluno(...)` | `=M-atitudes` |
+| `calcNotaEncontro(...)` | `=(inter×0,5 + auto×0,5 + prof×4) / 5` |
+| `calcNotaFormativa(...)` | `=M.Ab + M.Fe (máx 10)` |
+
+**Regra do aluno faltoso:** auto=0, interpares=0, professor=0 → nota=0,00
 
 ---
 
-## 🚀 Deploy em produção (Vercel — gratuito)
+## 🚀 Deploy em produção (Vercel)
 
 ```bash
-npm install -g vercel
-vercel
+git add .
+git commit -m "deploy"
+git push origin main
 ```
-Siga o assistente. Adicione as variáveis do `.env.local` no painel da Vercel.  
-Adicione `https://seu-projeto.vercel.app/api/auth/callback/google` nos URIs do Google Console.
+
+A Vercel detecta o push e faz o deploy automaticamente.
+
+**Variáveis obrigatórias na Vercel:**
+```
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+NEXTAUTH_SECRET
+NEXTAUTH_URL           → https://seu-projeto.vercel.app
+DATABASE_URL           → URL pooled do Neon
+DIRECT_DATABASE_URL    → URL direta do Neon
+ALLOWED_EMAIL_DOMAIN   → prof.cesupa.br
+```
 
 ---
 
@@ -156,17 +159,10 @@ Adicione `https://seu-projeto.vercel.app/api/auth/callback/google` nos URIs do G
 npm run dev          # Servidor de desenvolvimento
 npm run build        # Build de produção
 npm run db:studio    # Interface visual do banco (Prisma Studio)
-npm run db:migrate   # Aplicar migrações
-npm run db:seed      # Recriar dados de teste
+npm run db:seed      # Recriar dados de teste (apaga tudo e recria)
+npx prisma generate  # Regenerar Prisma Client
+npx prisma db push   # Sincronizar schema com o banco
 ```
-
----
-
-## 📱 Uso no celular (PWA)
-
-1. Acesse a URL do sistema no Chrome do celular
-2. Toque no menu (⋮) → "Adicionar à tela inicial"
-3. O sistema instala como app nativo
 
 ---
 
@@ -175,6 +171,8 @@ npm run db:seed      # Recriar dados de teste
 | Erro | Solução |
 |------|---------|
 | `Cannot find module '@prisma/client'` | Execute `npx prisma generate` |
-| `P1001: Can't reach database server` | Verifique `DATABASE_URL` no `.env.local` |
-| Login retorna "Acesso negado" | Verifique `ALLOWED_EMAIL_DOMAIN` e o domínio do seu email |
-| `Error: NEXTAUTH_SECRET is not set` | Execute `openssl rand -base64 32` e cole no `.env.local` |
+| `Can't reach database server` | Verifique `DATABASE_URL` no `.env.local` ou reative o projeto no Neon |
+| Login retorna "Acesso negado" | Verifique `ALLOWED_EMAIL_DOMAIN` — deve ser `prof.cesupa.br` |
+| Loop de redirecionamento | Limpe os cookies do browser e tente novamente |
+| `NEXTAUTH_SECRET is not set` | Execute `openssl rand -base64 32` e cole no `.env.local` |
+| Papel ALUNO após login | Execute no Neon SQL: `UPDATE usuarios SET papel='TUTOR' WHERE email='seu@email'` |

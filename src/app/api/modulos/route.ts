@@ -12,8 +12,21 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   if (session.user.papel === 'TUTOR') {
+    // Módulos onde é titular OU co-tutor
+    const coTutorLinks = await prisma.coTutor.findMany({
+      where:  { tutorId: session.user.id },
+      select: { moduloId: true },
+    })
+    const coTutorModuloIds = coTutorLinks.map((ct: any) => ct.moduloId)
+
     const modulos = await prisma.modulo.findMany({
-      where: { tutorId: session.user.id, arquivado: false },
+      where: {
+        arquivado: false,
+        OR: [
+          { tutorId: session.user.id },
+          { id: { in: coTutorModuloIds } },
+        ],
+      },
       include: {
         problemas: { orderBy: { numero: 'asc' } },
         matriculas: {

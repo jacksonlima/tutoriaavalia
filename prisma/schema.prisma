@@ -39,6 +39,7 @@ model Usuario {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   modulosTutor        Modulo[]         @relation("Tutor")
+  coTutorEm           CoTutor[]
   matriculas          Matricula[]
   avaliacoesTutor     AvaliacaoTutor[]
   avaliacoesFeitas    AvaliacaoAluno[] @relation("Avaliador")
@@ -67,9 +68,27 @@ model Modulo {
   tutor      Usuario     @relation("Tutor", fields: [tutorId], references: [id])
   matriculas Matricula[]
   problemas  Problema[]
+  coTutores  CoTutor[]
 
   @@unique([ano, tutoria, turma, tutorId])
   @@map("modulos")
+}
+
+// ─────────────────────────────────────────────
+// CO-TUTORES (SUBSTITUTOS)
+// ─────────────────────────────────────────────
+
+model CoTutor {
+  id        String   @id @default(uuid())
+  moduloId  String   @map("modulo_id")
+  tutorId   String   @map("tutor_id")
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  modulo Modulo  @relation(fields: [moduloId], references: [id])
+  tutor  Usuario @relation(fields: [tutorId], references: [id])
+
+  @@unique([moduloId, tutorId])
+  @@map("co_tutores")
 }
 
 // ─────────────────────────────────────────────

@@ -37,7 +37,14 @@ export default async function RelatoriosPage({ searchParams }: Props) {
       problemas: { orderBy: { numero: 'asc' } },
     },
   })
-  if (!modulo || modulo.tutorId !== session.user.id) redirect('/professor/dashboard')
+  if (!modulo) redirect('/professor/dashboard')
+  // Permite acesso se for titular ou co-tutor
+  if (modulo.tutorId !== session.user.id) {
+    const coTutor = await prisma.coTutor.findUnique({
+      where: { moduloId_tutorId: { moduloId, tutorId: session.user.id } },
+    })
+    if (!coTutor) redirect('/professor/dashboard')
+  }
 
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
     prisma.avaliacaoTutor.findMany({ where: { problema: { moduloId } } }),
