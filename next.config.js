@@ -9,19 +9,13 @@ const nextConfig = {
     ],
   },
 
-  // Ignora erros de TypeScript e ESLint no build
+  // TypeScript: ignora erros de tipo no build de produção
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 
-  // Prisma e NextAuth precisam rodar no Node.js runtime, não no Edge runtime
-  // Isso impede o Next.js de tentar bundlar o @prisma/client durante o build
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma', 'bcryptjs'],
-  },
+  // Prisma Client roda no Node.js runtime — não pode ser bundlado pelo Next.js
+  serverExternalPackages: ['@prisma/client', 'prisma'],
 }
 
 module.exports = nextConfig

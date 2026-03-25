@@ -7,10 +7,9 @@ import { TopBar } from '@/components/ui/TopBar'
 import { useToast } from '@/components/ui/use-toast'
 import { getCriterios, getLabelTipo, OPCOES_ATITUDES, TipoEncontroForm, Criterio, CampoNota } from '@/lib/criterios'
 
-type Aluno    = { id: string; nome: string }
+type Aluno     = { id: string; nome: string }
 type NotaAluno = { avaliadoId: string; c1: number; c2: number; c3: number; atitudes: number }
 
-// Dropdown reutilizavel para notas
 function DropdownNota({
   valor, opcoes, onChange, disabled = false,
 }: {
@@ -36,9 +35,11 @@ function AlunoAvaliarPageInner() {
   const router  = useRouter()
   const { toast } = useToast()
 
-  const problemaId   = params.get('problemaId') ?? ''
-  const tipo         = (params.get('tipo') ?? 'ABERTURA') as TipoEncontroForm
-  const nomeProblem  = params.get('nome') ?? ''
+  const problemaId  = params.get('problemaId') ?? ''
+  const tipo        = (params.get('tipo') ?? 'ABERTURA') as TipoEncontroForm
+  const nomeProblem = params.get('nome') ?? ''
+  // externo=1 quando o aluno foi realocado para outro módulo
+  const externo     = params.get('externo') === '1'
 
   const [alunos,     setAlunos]     = useState<Aluno[]>([])
   const [notas,      setNotas]      = useState<Record<string, NotaAluno>>({})
@@ -46,70 +47,85 @@ function AlunoAvaliarPageInner() {
   const [fase,       setFase]       = useState<'formulario' | 'revisao' | 'concluido'>('formulario')
   const [carregando, setCarregando] = useState(true)
   const [enviando,   setEnviando]   = useState(false)
+  const [moduloInfo, setModuloInfo] = useState<{ nome: string; tutoria: string } | null>(null)
 
   const criterios = getCriterios(tipo)
   const labelTipo = getLabelTipo(tipo)
 
+  // ── Carrega o grupo de alunos ────────────────────────────────────
   useEffect(() => {
-    if (!problemaId) return
-    Promise.all([
-      fetch('/api/avaliacoes/aluno?problemaId=' + problemaId + '&tipoEncontro=' + tipo).then((r) => r.json()),
-      fetch('/api/modulos').then((r) => r.json()),
-    ]).then(([avalData, modulos]: [any, any[]]) => {
-      if (avalData.submetido) {
-        // Carrega a lista de alunos e as notas já submetidas para exibir em modo somente leitura
-        for (const m of modulos) {
-          const prob = m.problemas?.find((p: any) => p.id === problemaId)
-          if (prob) {
-            const todosAlunos: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
-            const euMesmo   = todosAlunos.find((a: Aluno) => a.id === session?.user?.id)
-            const outros    = todosAlunos.filter((a: Aluno) => a.id !== session?.user?.id)
-            const alunosArr = euMesmo ? [euMesmo, ...outros] : todosAlunos
-            setAlunos(alunosArr)
+    if (!problemaId || !session) return
 
-            // Popula as notas a partir das avaliações já submetidas
-            const notasMap: Record<string, NotaAluno> = {}
-            for (const a of alunosArr) {
-              // Busca a avaliação deste aluno nas avaliações retornadas pela API
-              const av = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
-              notasMap[a.id] = {
-                avaliadoId: a.id,
-                c1:       av ? Number(av.c1)       : 0,
-                c2:       av ? Number(av.c2)       : 0,
-                c3:       av ? Number(av.c3)       : 0,
-                atitudes: av ? Number(av.atitudes) : 0,
-              }
+    // Verifica se já submeteu
+    fetch('/api/avaliacoes/aluno?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
+      .then((r) => r.json())
+      .then(async (avalData: any) => {
+
+        // ── Busca o grupo completo (matriculados + visitantes) ──────
+        // Usa a API de grupo que já inclui visitantes para QUALQUER tipo de acesso
+        const grupoRes  = await fetch(
+          `/api/encontros-especiais/grupo?problemaId=${problemaId}&tipoEncontro=${tipo}`
+        )
+
+        let grupo: Aluno[] = []
+        let moduloDestino: { nome: string; tutoria: string } | null = null
+
+        if (grupoRes.ok) {
+          const grupoData = await grupoRes.json()
+          grupo           = grupoData.grupo ?? []
+          moduloDestino   = grupoData.modulo ?? null
+        } else {
+          // Fallback: aluno está no próprio módulo, busca via /api/modulos
+          const modulos: any[] = await fetch('/api/modulos').then((r) => r.json())
+          for (const m of modulos) {
+            const prob = m.problemas?.find((p: any) => p.id === problemaId)
+            if (prob) {
+              grupo = m.matriculas.map((ma: any) => ma.usuario)
+              break
             }
-            setNotas(notasMap)
-            break
           }
         }
-        setFase('concluido')
-      } else {
-        for (const m of modulos) {
-          const prob = m.problemas?.find((p: any) => p.id === problemaId)
-          if (prob) {
-            const todosAlunos: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
 
-            // Coloca o aluno logado SEMPRE primeiro na lista (auto-avaliação no card 1)
-            // Os demais ficam na ordem de numeraNaTurma (garantida pela API)
-            const euMesmo = todosAlunos.find((a) => a.id === session?.user?.id)
-            const outros  = todosAlunos.filter((a) => a.id !== session?.user?.id)
-            const alunosArr = euMesmo ? [euMesmo, ...outros] : todosAlunos
+        if (moduloDestino) setModuloInfo(moduloDestino)
 
-            setAlunos(alunosArr)
-            const init: Record<string, NotaAluno> = {}
-            for (const a of alunosArr) {
-              init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
-            }
-            setNotas(init)
-            break
-          }
+        if (grupo.length === 0) {
+          setCarregando(false)
+          return
         }
-      }
-      setCarregando(false)
-    })
-  }, [problemaId, tipo])
+
+        // Aluno logado sempre primeiro (auto-avaliação no card 1)
+        const euMesmo = grupo.find((a) => a.id === session?.user?.id)
+        const outros  = grupo.filter((a) => a.id !== session?.user?.id)
+        const alunosOrdenados = euMesmo ? [euMesmo, ...outros] : grupo
+
+        if (avalData.submetido) {
+          setAlunos(alunosOrdenados)
+          // Popula notas já submetidas
+          const notasMap: Record<string, NotaAluno> = {}
+          for (const a of alunosOrdenados) {
+            const av = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
+            notasMap[a.id] = {
+              avaliadoId: a.id,
+              c1:       av ? Number(av.c1)       : 0,
+              c2:       av ? Number(av.c2)       : 0,
+              c3:       av ? Number(av.c3)       : 0,
+              atitudes: av ? Number(av.atitudes) : 0,
+            }
+          }
+          setNotas(notasMap)
+          setFase('concluido')
+        } else {
+          setAlunos(alunosOrdenados)
+          const init: Record<string, NotaAluno> = {}
+          for (const a of alunosOrdenados) {
+            init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
+          }
+          setNotas(init)
+        }
+
+        setCarregando(false)
+      })
+  }, [problemaId, tipo, session])
 
   const setNota = (alunoId: string, campo: CampoNota, valor: number) => {
     setNotas((prev) => ({ ...prev, [alunoId]: { ...prev[alunoId], [campo]: valor } }))
@@ -132,182 +148,146 @@ function AlunoAvaliarPageInner() {
     }
   }
 
-  const calcMAt = (n: NotaAluno) =>
-    ((n.c1 + n.c2 + n.c3) / 3 - n.atitudes).toFixed(2)
+  if (carregando) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
-  const alunoAtual = alunos[cardAtual]
-  const notaAtual  = alunoAtual ? notas[alunoAtual.id] : null
-  const eVoce      = alunoAtual?.id === session?.user?.id
-  const progresso  = alunos.length > 0 ? Math.round((cardAtual / alunos.length) * 100) : 0
-
-  if (carregando) return <div className="p-8 text-center text-gray-400">Carregando...</div>
-
-  // ── CONCLUIDO: exibe as notas enviadas em modo somente leitura ──
-  if (fase === 'concluido') {
-    const criterios = getCriterios(tipo)
-    const labelTipo = getLabelTipo(tipo)
-
-    const calcMAt = (n: NotaAluno) =>
-      ((n.c1 + n.c2 + n.c3) / 3 - n.atitudes).toFixed(2)
-
-    const euMesmo   = alunos.find((a) => a.id === session?.user?.id)
-    const colegas   = alunos.filter((a) => a.id !== session?.user?.id)
-    const ordenados = euMesmo ? [euMesmo, ...colegas] : alunos
-
+  // ── Sem alunos ────────────────────────────────────────────────────
+  if (alunos.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" backLabel="Voltar ao início" />
-        <main className="max-w-lg mx-auto px-4 py-6">
-
-          {/* Cabeçalho */}
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h1 className="text-xl font-bold text-[#1F4E79]">Notas Enviadas</h1>
-              <p className="text-sm text-gray-400">{nomeProblem} — {labelTipo}</p>
-            </div>
-            <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">
-              ✓ Enviado
-            </span>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-xs text-amber-700">
-            Somente leitura — estas notas foram registradas e não podem ser alteradas.
-          </div>
-
-          {ordenados.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              Carregando notas...
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {ordenados.map((aluno) => {
-                const n = notas[aluno.id]
-                if (!n) return null
-                const eVoce = aluno.id === session?.user?.id
-
-                return (
-                  <div key={aluno.id}
-                    className={"bg-white rounded-xl border p-4 " + (eVoce ? "border-green-200" : "border-gray-200")}>
-
-                    {/* Nome do avaliado */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className={"w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 " +
-                        (eVoce ? "bg-green-600" : "bg-[#1F4E79]")}>
-                        {aluno.nome.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">{aluno.nome}</p>
-                        {eVoce && (
-                          <span className="text-xs text-green-600 font-medium">Auto-avaliação</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Notas dos critérios */}
-                    <div className="space-y-1.5">
-                      {criterios.map((c) => (
-                        <div key={c.campo} className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500 flex-1 pr-2">
-                            <span className="font-semibold text-[#1F4E79]">{c.label}</span>
-                            {' — '}
-                            <span className="truncate">{c.nome}</span>
-                          </span>
-                          <span className="text-sm font-bold text-gray-800 shrink-0 w-10 text-right">
-                            {(n[c.campo] as number).toFixed(1)}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          <span className="font-semibold text-[#1F4E79]">Atitudes</span>
-                        </span>
-                        <span className="text-sm font-bold text-gray-800 shrink-0 w-10 text-right">
-                          {n.atitudes.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* M−Atitudes */}
-                    <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
-                      <span className="text-xs text-gray-400">M − Atitudes</span>
-                      <span className="text-sm font-bold text-[#1F4E79]">{calcMAt(n)}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <button
-            onClick={() => router.push('/aluno/dashboard')}
-            className="w-full mt-5 border border-gray-300 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium"
-          >
-            Voltar ao início
-          </button>
+        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" />
+        <main className="max-w-lg mx-auto px-4 py-16 text-center">
+          <div className="text-5xl mb-4">⏳</div>
+          <h1 className="text-xl font-bold text-gray-700 mb-2">Encontro não disponível</h1>
+          <p className="text-sm text-gray-400">
+            O encontro ainda não foi aberto ou você não está alocado neste grupo.
+            Verifique com seu professor.
+          </p>
         </main>
       </div>
     )
   }
 
-  // ── REVISAO ──────────────────────────────────────────────────────
-  if (fase === 'revisao') {
+  const alunoAtual = alunos[cardAtual]
+  const notaAtual  = notas[alunoAtual?.id] ?? { avaliadoId: '', c1: 0, c2: 0, c3: 0, atitudes: 0 }
+  const ehAutoAval = alunoAtual?.id === session?.user?.id
+
+  // ── Concluído ─────────────────────────────────────────────────────
+  if (fase === 'concluido') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" backLabel="Voltar ao início" />
-        <main className="max-w-lg mx-auto px-4 py-6">
-          <div className="mb-5">
-            <h1 className="text-xl font-bold text-[#1F4E79]">Revise antes de enviar</h1>
-            <p className="text-sm text-gray-400">{nomeProblem} — {labelTipo}</p>
+        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" />
+        <main className="max-w-lg mx-auto px-4 py-8">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center mb-6">
+            <div className="text-5xl mb-3">✅</div>
+            <h1 className="text-xl font-bold text-gray-800 mb-1">Avaliação enviada!</h1>
+            <p className="text-sm text-gray-500">
+              {externo
+                ? `Encontro Especial — ${moduloInfo?.nome ?? 'Módulo externo'} · ${moduloInfo?.tutoria ?? ''}`
+                : `${labelTipo} · ${nomeProblem}`}
+            </p>
           </div>
-
-          <div className="space-y-3 mb-6">
-            {alunos.map((aluno) => {
-              const n = notas[aluno.id]
+          <div className="space-y-3">
+            {alunos.map((a) => {
+              const n = notas[a.id]
+              const media = n ? ((n.c1 + n.c2 + n.c3) / 3 - n.atitudes).toFixed(2) : '—'
               return (
-                <div key={aluno.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="font-semibold text-sm text-gray-800 mb-3">
-                    {aluno.nome}
-                    {aluno.id === session?.user?.id && (
-                      <span className="text-blue-500 text-xs ml-2">(Voce)</span>
+                <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-800 text-sm">{a.nome}</p>
+                    {a.id === session?.user?.id && (
+                      <span className="text-xs bg-[#1F4E79] text-white px-2 py-0.5 rounded-full">
+                        Você
+                      </span>
                     )}
-                  </p>
-                  <div className="space-y-1.5">
-                    {criterios.map((c) => (
-                      <div key={c.campo} className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500">
-                          <span className="font-semibold text-[#1F4E79]">{c.label}</span>
-                          {' '}— {c.nome.length > 50 ? c.nome.substring(0, 50) + '...' : c.nome}
-                        </span>
-                        <span className="font-bold text-gray-800 ml-2 shrink-0">
-                          {(n[c.campo] as number).toFixed(1)}
-                        </span>
+                  </div>
+                  {n && (
+                    <div className="grid grid-cols-5 gap-2 text-xs text-center text-gray-500">
+                      {(['c1','c2','c3'] as const).map((c, i) => (
+                        <div key={c} className="bg-gray-50 rounded-lg p-2">
+                          <p className="font-medium text-gray-400">C{i+1}</p>
+                          <p className="font-bold text-gray-700">{Number(n[c]).toFixed(1)}</p>
+                        </div>
+                      ))}
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <p className="font-medium text-gray-400">At.</p>
+                        <p className="font-bold text-gray-700">{Number(n.atitudes).toFixed(1)}</p>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500"><span className="font-semibold text-[#1F4E79]">Atitudes</span></span>
-                      <span className="font-bold text-gray-800 ml-2">{n.atitudes.toFixed(1)}</span>
+                      <div className="bg-[#1F4E79] bg-opacity-10 rounded-lg p-2">
+                        <p className="font-medium text-[#1F4E79]">M-At</p>
+                        <p className="font-bold text-[#1F4E79]">{media}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
-                    M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
-                  </div>
+                  )}
                 </div>
               )
             })}
           </div>
+        </main>
+      </div>
+    )
+  }
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-700">
-            Apos confirmar, nao sera possivel alterar suas notas.
+  // ── Revisão ───────────────────────────────────────────────────────
+  if (fase === 'revisao') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" />
+        <main className="max-w-lg mx-auto px-4 py-6">
+          {externo && moduloInfo && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 mb-4 text-xs text-amber-700 font-medium">
+              🔄 Encontro Especial — {moduloInfo.nome} · {moduloInfo.tutoria}
+            </div>
+          )}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4">
+            <h2 className="font-bold text-gray-800 mb-1">Revisar antes de enviar</h2>
+            <p className="text-xs text-gray-400">{labelTipo} · {nomeProblem}</p>
           </div>
-
+          <div className="space-y-3 mb-6">
+            {alunos.map((a) => {
+              const n = notas[a.id]
+              return (
+                <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium text-gray-800 text-sm">{a.nome}</p>
+                    {a.id === session?.user?.id && (
+                      <span className="text-xs bg-[#1F4E79] text-white px-2 py-0.5 rounded-full">Auto</span>
+                    )}
+                  </div>
+                  {n && (
+                    <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                      {(['c1','c2','c3'] as const).map((c, i) => (
+                        <div key={c} className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-gray-400">C{i+1}</p>
+                          <p className="font-bold text-gray-700">{Number(n[c]).toFixed(1)}</p>
+                        </div>
+                      ))}
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <p className="text-gray-400">At.</p>
+                        <p className="font-bold text-gray-700">{Number(n.atitudes).toFixed(1)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
           <div className="flex gap-3">
-            <button onClick={() => { setFase('formulario'); setCardAtual(0) }}
-              className="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium">
-              Corrigir
+            <button type="button" onClick={() => setFase('formulario')}
+              className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium text-sm hover:bg-gray-50">
+              ← Corrigir
             </button>
-            <button onClick={enviar} disabled={enviando}
-              className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60">
-              {enviando ? 'Enviando...' : 'Confirmar Envio'}
+            <button type="button" onClick={enviar} disabled={enviando}
+              className="flex-1 bg-[#1F4E79] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#163d61] disabled:opacity-50">
+              {enviando ? 'Enviando...' : '✅ Confirmar Envio'}
             </button>
           </div>
         </main>
@@ -315,121 +295,98 @@ function AlunoAvaliarPageInner() {
     )
   }
 
-  // ── FORMULARIO (card por card) ───────────────────────────────────
+  // ── Formulário ────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" backLabel="Voltar ao início" />
+      <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" backHref="/aluno/dashboard" />
       <main className="max-w-lg mx-auto px-4 py-6">
-
-        <div className="mb-3">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">{nomeProblem} — {labelTipo}</p>
-          <h1 className="text-xl font-bold text-[#1F4E79] mt-0.5">Avaliar Colegas</h1>
-        </div>
-
-        {/* Barra de progresso */}
-        <div className="bg-gray-200 rounded-full h-1.5 mb-1">
-          <div className="bg-[#2E75B6] h-1.5 rounded-full transition-all" style={{ width: progresso + '%' }} />
-        </div>
-        <p className="text-xs text-gray-400 text-right mb-4">{cardAtual + 1} de {alunos.length}</p>
-
-        {/* Card do aluno atual */}
-        {alunoAtual && notaAtual && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            {/* Identificação do aluno */}
-            <div className="text-center mb-5">
-              <div className={"w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2 " + (eVoce ? "bg-green-600 ring-4 ring-green-200" : "bg-[#1F4E79]")}>
-                <span className="text-white text-xl font-bold">{alunoAtual.nome.charAt(0)}</span>
-              </div>
-              {eVoce ? (
-                <div className="mb-1">
-                  <span className="inline-block bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    AUTO-AVALIACAO — Avalie voce mesmo
-                  </span>
-                </div>
-              ) : (
-                <div className="mb-1">
-                  <span className="inline-block bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
-                    Avaliacao Interpares — {cardAtual} de {alunos.length - 1}
-                  </span>
-                </div>
-              )}
-              <h2 className="font-bold text-gray-800 text-lg">{alunoAtual.nome}</h2>
-            </div>
-
-            {/* Criterios com dropdown */}
-            <div className="space-y-4">
-              {criterios.map((c) => (
-                <div key={c.campo} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <span className="text-xs font-bold text-[#1F4E79] bg-blue-50 px-1.5 py-0.5 rounded">{c.label}</span>
-                      <p className="text-sm text-gray-700 mt-1 leading-snug">{c.nome}</p>
-                    </div>
-                    <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
-                      {(notaAtual[c.campo] as number).toFixed(1)}
-                    </span>
-                  </div>
-                  <DropdownNota
-                    valor={notaAtual[c.campo] as number}
-                    opcoes={c.opcoes}
-                    onChange={(v) => setNota(alunoAtual.id, c.campo, v)}
-                  />
-                </div>
-              ))}
-
-              {/* Atitudes */}
-              <div className="border border-gray-100 rounded-xl p-3 bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="text-xs font-bold text-[#1F4E79] bg-blue-50 px-1.5 py-0.5 rounded">Atitudes</span>
-                    <p className="text-sm text-gray-700 mt-1">Avalie as atitudes durante o encontro</p>
-                  </div>
-                  <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
-                    {notaAtual.atitudes.toFixed(1)}
-                  </span>
-                </div>
-                <DropdownNota
-                  valor={notaAtual.atitudes}
-                  opcoes={OPCOES_ATITUDES}
-                  onChange={(v) => setNota(alunoAtual.id, 'atitudes', v)}
-                />
-              </div>
-            </div>
-
-            {/* Calculo em tempo real */}
-            <div className="mt-4 bg-[#1F4E79] text-white rounded-xl p-3 text-center text-sm">
-              M = {((notaAtual.c1 + notaAtual.c2 + notaAtual.c3) / 3).toFixed(2)}
-              <span className="mx-3 opacity-40">|</span>
-              M−At = <span className="font-bold">{calcMAt(notaAtual)}</span>
-            </div>
+        {/* Badge encontro especial */}
+        {externo && moduloInfo && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 mb-4 text-xs text-amber-700 font-medium">
+            🔄 Encontro Especial — {moduloInfo.nome} · {moduloInfo.tutoria}
           </div>
         )}
 
-        {/* Navegacao entre cards */}
-        <div className="flex gap-3 mt-4">
-          <button onClick={() => setCardAtual((p) => Math.max(0, p - 1))} disabled={cardAtual === 0}
-            className="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40">
-            Anterior
-          </button>
-          {cardAtual < alunos.length - 1 ? (
-            <button onClick={() => setCardAtual((p) => p + 1)}
-              className="flex-1 bg-[#2E75B6] text-white px-4 py-2.5 rounded-lg text-sm font-medium">
-              Proximo
-            </button>
-          ) : (
-            <button onClick={() => setFase('revisao')}
-              className="flex-1 bg-[#1F4E79] text-white px-4 py-2.5 rounded-lg text-sm font-medium">
-              Revisar
-            </button>
+        {/* Cabeçalho */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+              {labelTipo}
+            </span>
+            <span className="text-xs text-gray-400">
+              {cardAtual + 1} de {alunos.length}
+            </span>
+          </div>
+          <h2 className="font-bold text-gray-800">{alunoAtual?.nome}</h2>
+          {ehAutoAval && (
+            <p className="text-xs text-[#1F4E79] mt-0.5 font-medium">Auto-avaliação</p>
           )}
+          {/* Barra de progresso */}
+          <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#1F4E79] rounded-full transition-all"
+              style={{ width: `${((cardAtual + 1) / alunos.length) * 100}%` }}
+            />
+          </div>
         </div>
 
-        {/* Indicadores de posicao */}
-        <div className="flex justify-center gap-1.5 mt-4 flex-wrap">
-          {alunos.map((_, i) => (
-            <button key={i} onClick={() => setCardAtual(i)}
-              className={'h-2.5 rounded-full transition-all ' + (i === cardAtual ? 'bg-[#1F4E79] w-6' : 'bg-gray-300 w-2.5')} />
+        {/* Critérios */}
+        <div className="space-y-3">
+          {criterios.map((criterio: Criterio) => (
+            <div key={criterio.campo} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <span className="shrink-0 bg-[#1F4E79] text-white text-xs font-bold px-2 py-1 rounded-lg mt-0.5">
+                  {criterio.label}
+                </span>
+                <p className="text-sm font-medium text-gray-800 leading-snug">
+                  {criterio.nome}
+                </p>
+              </div>
+              <DropdownNota
+                valor={notaAtual[criterio.campo as CampoNota] as number}
+                opcoes={criterio.opcoes}
+                onChange={(v) => setNota(alunoAtual.id, criterio.campo as CampoNota, v)}
+              />
+            </div>
           ))}
+
+          {/* Atitudes */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+            <div className="flex items-start gap-2 mb-3">
+              <span className="shrink-0 bg-gray-500 text-white text-xs font-bold px-2 py-1 rounded-lg mt-0.5">
+                At.
+              </span>
+              <p className="text-sm font-medium text-gray-800 leading-snug">
+                Atitudes — Pontualidade, responsabilidade, postura e comportamento.
+              </p>
+            </div>
+            <DropdownNota
+              valor={notaAtual.atitudes}
+              opcoes={OPCOES_ATITUDES}
+              onChange={(v) => setNota(alunoAtual.id, 'atitudes', v)}
+            />
+          </div>
+        </div>
+
+        {/* Navegação */}
+        <div className="mt-6 flex gap-3">
+          {cardAtual > 0 && (
+            <button type="button" onClick={() => setCardAtual((p) => p - 1)}
+              className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium text-sm hover:bg-gray-50">
+              ← Anterior
+            </button>
+          )}
+          {cardAtual < alunos.length - 1 ? (
+            <button type="button" onClick={() => setCardAtual((p) => p + 1)}
+              className="flex-1 bg-[#2E75B6] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1F4E79]">
+              Próximo →
+            </button>
+          ) : (
+            <button type="button" onClick={() => setFase('revisao')}
+              className="flex-1 bg-[#1F4E79] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#163d61]">
+              Revisar →
+            </button>
+          )}
         </div>
       </main>
     </div>

@@ -16,7 +16,7 @@ export default async function AlunoDashboard() {
       modulo: {
         include: {
           problemas: { orderBy: { numero: 'asc' } },
-          tutor: { select: { nome: true } },
+          tutor:     { select: { nome: true } },
         },
       },
     },
@@ -30,33 +30,48 @@ export default async function AlunoDashboard() {
         <TopBar nome={session.user.nome} papel="ALUNO" />
         <main className="max-w-lg mx-auto px-4 py-16 text-center">
           <div className="text-5xl mb-4">🎓</div>
-          <h1 className="text-xl font-bold text-gray-700 mb-2">Nenhum modulo ativo</h1>
-          <p className="text-sm text-gray-400">Aguarde seu professor ativar um modulo.</p>
+          <h1 className="text-xl font-bold text-gray-700 mb-2">Nenhum módulo ativo</h1>
+          <p className="text-sm text-gray-400">Aguarde seu professor ativar um módulo.</p>
         </main>
       </div>
     )
   }
 
   const problemasIds = modulo.problemas.map((p) => p.id)
-  const submissoes   = await prisma.submissao.findMany({
+
+  // Submissões no módulo de origem (encontros normais)
+  const submissoes = await prisma.submissao.findMany({
     where: { problemaId: { in: problemasIds }, avaliadorId: session.user.id },
   })
 
-  // Encontros especiais: este aluno foi redistribuído para outro módulo
+  // Encontros especiais atribuídos a este aluno no módulo de origem
+  // Chave de bloqueio: (alunoId, moduloOrigemId, tipoEncontro)
   const encontrosEspeciais = await prisma.encontroEspecial.findMany({
     where: { alunoId: session.user.id, moduloOrigemId: matricula.moduloId },
     include: {
       problemaDestino: {
         include: {
-          modulo: { select: { nome: true, tutoria: true, turma: true, tutor: { select: { nome: true } } } },
+          modulo: {
+            select: {
+              nome:    true,
+              tutoria: true,
+              turma:   true,
+              tutor:   { select: { nome: true } },
+            },
+          },
         },
       },
     },
   })
 
-  // Submissões dos encontros especiais
+  // Mapa de tipos delegados: "ABERTURA" | "FECHAMENTO" | "FECHAMENTO_A" | "FECHAMENTO_B" → EncontroEspecial
+  const tiposDelegados = new Map(
+    encontrosEspeciais.map((ee) => [ee.tipoEncontro, ee])
+  )
+
+  // Submissões dos encontros especiais (para saber se o aluno já avaliou lá fora)
   const problemasExternosIds = encontrosEspeciais.map((e) => e.problemaDestinoId)
-  const submissoesExternas = problemasExternosIds.length > 0
+  const submissoesExternas   = problemasExternosIds.length > 0
     ? await prisma.submissao.findMany({
         where: { problemaId: { in: problemasExternosIds }, avaliadorId: session.user.id },
       })
@@ -65,22 +80,29 @@ export default async function AlunoDashboard() {
   const jaSubmeteu = (probId: string, tipo: string) =>
     submissoes.some((s) => s.problemaId === probId && s.tipoEncontro === tipo)
 
-  type Status = 'enviado' | 'aberto' | 'aguardando'
+  // Status de um encontro, considerando delegação
+  type Status = 'enviado' | 'aberto' | 'aguardando' | 'delegado'
+
   const statusEncontro = (probId: string, tipo: string, ativo: boolean): Status => {
     if (jaSubmeteu(probId, tipo)) return 'enviado'
+    // 'delegado' só se o encontro estaria 'aberto' — inativo continua 'aguardando'
+    if (tiposDelegados.has(tipo as any) && ativo) return 'delegado'
     if (ativo) return 'aberto'
     return 'aguardando'
   }
 
   const estiloStatus: Record<Status, string> = {
-    enviado:    'bg-green-100 text-green-700',
-    aberto:     'bg-blue-100 text-blue-700',
-    aguardando: 'bg-gray-100 text-gray-400',
+    enviado:   'bg-green-100 text-green-700',
+    aberto:    'bg-blue-600 text-white',
+    aguardando:'bg-gray-100 text-gray-400',
+    delegado:  'bg-amber-50 text-amber-700 border border-amber-200',
   }
+
   const labelStatus: Record<Status, string> = {
-    enviado:    'Enviado',
-    aberto:     'Avaliar',
-    aguardando: 'Aguardando',
+    enviado:   'Enviado ✓',
+    aberto:    'Avaliar',
+    aguardando:'Aguardando',
+    delegado:  '🔄 Delegado',
   }
 
   return (
@@ -88,11 +110,12 @@ export default async function AlunoDashboard() {
       <TopBar nome={session.user.nome} papel="ALUNO" />
       <main className="max-w-lg mx-auto px-4 py-6">
 
+        {/* Cabeçalho do módulo */}
         <div className="bg-[#1F4E79] rounded-xl p-4 text-white mb-5">
-          <p className="text-xs text-blue-200 mb-0.5">Modulo Ativo</p>
+          <p className="text-xs text-blue-200 mb-0.5">Módulo Ativo</p>
           <h1 className="text-lg font-bold">{modulo.nome}</h1>
           <p className="text-sm text-blue-200 mt-0.5">
-            Tutor: {modulo.tutor.nome} - {modulo.tutoria} - Turma {modulo.turma} - {modulo.ano}
+            Tutor: {modulo.tutor.nome} · {modulo.tutoria} · Turma {modulo.turma} · {modulo.ano}
           </p>
         </div>
 
@@ -104,7 +127,6 @@ export default async function AlunoDashboard() {
           {modulo.problemas.map((prob) => {
             const stAb = statusEncontro(prob.id, 'ABERTURA', prob.aberturaAtiva)
 
-            // Salto Triplo: mostra Fe A e Fe B; caso contrario, mostra Fe normal
             const encontrosFechamento = prob.temSaltoTriplo
               ? [
                   { tipo: 'FECHAMENTO_A', label: 'Fechamento A', ativo: prob.fechamentoAAtivo },
@@ -114,85 +136,105 @@ export default async function AlunoDashboard() {
                   { tipo: 'FECHAMENTO', label: 'Fechamento', ativo: prob.fechamentoAtivo },
                 ]
 
+            const renderBotao = (
+              probId: string,
+              tipo: string,
+              label: string,
+              ativo: boolean,
+              nomeProblem: string | null,
+              corAberto?: string
+            ) => {
+              const st = statusEncontro(probId, tipo, ativo)
+
+              if (st === 'delegado') {
+                // Encontro delegado — bloqueia o botão original
+                const ee = tiposDelegados.get(tipo as any)!
+                return (
+                  <div
+                    title={`Delegado para: ${ee.problemaDestino.modulo.nome} · ${ee.problemaDestino.modulo.tutoria}`}
+                    className="w-full text-center text-xs font-medium px-2 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 cursor-default"
+                  >
+                    🔄 {label}: Delegado
+                  </div>
+                )
+              }
+
+              if (st === 'aberto') {
+                return (
+                  <Link
+                    href={`/aluno/avaliar?problemaId=${probId}&tipo=${tipo}&nome=${encodeURIComponent(nomeProblem ?? '')}`}
+                    className={`block w-full text-center text-xs font-medium px-2 py-2 rounded-lg ${corAberto ?? 'bg-blue-600 text-white'}`}
+                  >
+                    {label}
+                  </Link>
+                )
+              }
+
+              if (st === 'enviado') {
+                return (
+                  <Link
+                    href={`/aluno/avaliar?problemaId=${probId}&tipo=${tipo}&nome=${encodeURIComponent(nomeProblem ?? '')}`}
+                    className="block w-full text-center text-xs font-medium px-2 py-2 rounded-lg bg-green-100 text-green-700"
+                  >
+                    {label}: Enviado ✓
+                  </Link>
+                )
+              }
+
+              return (
+                <div className="w-full text-center text-xs font-medium px-2 py-2 rounded-lg bg-gray-100 text-gray-400">
+                  {label}: Aguardando
+                </div>
+              )
+            }
+
             return (
               <div key={prob.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <p className="font-semibold text-gray-800 text-sm">
-                    {prob.nome ?? ("Problema " + String(prob.numero).padStart(2, "0"))}
+                    {prob.nome ?? ('Problema ' + String(prob.numero).padStart(2, '0'))}
                   </p>
                   {prob.temSaltoTriplo && (
                     <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
                   )}
                 </div>
 
-                <div className={"grid gap-2 " + (prob.temSaltoTriplo ? "grid-cols-3" : "grid-cols-2")}>
-                  {/* Abertura */}
-                  {stAb === 'aberto' ? (
-                    <Link href={"/aluno/avaliar?problemaId=" + prob.id + "&tipo=ABERTURA&nome=" + encodeURIComponent(prob.nome ?? '')}
-                      className="block w-full text-center bg-blue-600 text-white text-xs font-medium px-2 py-2 rounded-lg">
-                      Abertura
-                    </Link>
-                  ) : stAb === 'enviado' ? (
-                    <Link href={"/aluno/avaliar?problemaId=" + prob.id + "&tipo=ABERTURA&nome=" + encodeURIComponent(prob.nome ?? '')}
-                      className={"block w-full text-center text-xs font-medium px-2 py-2 rounded-lg " + estiloStatus[stAb]}>
-                      Abertura: Enviado ✓
-                    </Link>
-                  ) : (
-                    <div className={"w-full text-center text-xs font-medium px-2 py-2 rounded-lg " + estiloStatus[stAb]}>
-                      Abertura: Aguardando
+                <div className={`grid gap-2 ${prob.temSaltoTriplo ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {renderBotao(prob.id, 'ABERTURA', 'Abertura', prob.aberturaAtiva, prob.nome)}
+                  {encontrosFechamento.map(({ tipo, label, ativo }) => (
+                    <div key={tipo}>
+                      {renderBotao(
+                        prob.id, tipo, label, ativo, prob.nome,
+                        prob.temSaltoTriplo ? 'bg-amber-500 text-white' : 'bg-blue-600 text-white'
+                      )}
                     </div>
-                  )}
-
-                  {/* Fechamento(s) */}
-                  {encontrosFechamento.map(({ tipo, label, ativo }) => {
-                    const st = statusEncontro(prob.id, tipo, ativo)
-                    if (st === 'aberto') {
-                      return (
-                        <Link key={tipo}
-                          href={"/aluno/avaliar?problemaId=" + prob.id + "&tipo=" + tipo + "&nome=" + encodeURIComponent(prob.nome ?? '')}
-                          className={"block w-full text-center text-xs font-medium px-2 py-2 rounded-lg " + (prob.temSaltoTriplo ? "bg-amber-500 text-white" : "bg-blue-600 text-white")}>
-                          {label}
-                        </Link>
-                      )
-                    }
-                    if (st === 'enviado') {
-                      return (
-                        <Link key={tipo}
-                          href={"/aluno/avaliar?problemaId=" + prob.id + "&tipo=" + tipo + "&nome=" + encodeURIComponent(prob.nome ?? '')}
-                          className={"block w-full text-center text-xs font-medium px-2 py-2 rounded-lg " + estiloStatus[st]}>
-                          {label}: Enviado ✓
-                        </Link>
-                      )
-                    }
-                    return (
-                      <div key={tipo} className={"w-full text-center text-xs font-medium px-2 py-2 rounded-lg " + estiloStatus[st]}>
-                        {label}: Aguardando
-                      </div>
-                    )
-                  })}
+                  ))}
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* ── Encontros Especiais ────────────────────────────────── */}
+        {/* ── Encontros Especiais ─────────────────────────────────────── */}
         {encontrosEspeciais.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-base font-bold text-[#1F4E79] mb-3 flex items-center gap-2">
+            <h2 className="text-base font-bold text-[#1F4E79] mb-1 flex items-center gap-2">
               🔄 Encontros Especiais
-              <span className="text-xs font-normal text-gray-400">
-                — você foi incluído temporariamente em outra tutoria
-              </span>
             </h2>
+            <p className="text-xs text-gray-400 mb-3">
+              Você foi redistribuído temporariamente para outra tutoria nestes encontros.
+              Sua nota será calculada normalmente e registrada no seu módulo de origem.
+            </p>
             <div className="space-y-3">
               {encontrosEspeciais.map((ee) => {
                 const jaFez = submissoesExternas.some(
-                  (s) => s.problemaId === ee.problemaDestinoId && s.tipoEncontro === ee.tipoEncontro
+                  (s) =>
+                    s.problemaId   === ee.problemaDestinoId &&
+                    s.tipoEncontro === ee.tipoEncontro
                 )
                 const prob  = ee.problemaDestino
                 const mod   = prob.modulo
-                const label = ee.tipoEncontro === 'ABERTURA' ? 'Abertura'
+                const label = ee.tipoEncontro === 'ABERTURA'    ? 'Abertura'
                   : ee.tipoEncontro === 'FECHAMENTO'   ? 'Fechamento'
                   : ee.tipoEncontro === 'FECHAMENTO_A' ? 'Fechamento A'
                   : 'Fechamento B'
@@ -207,17 +249,23 @@ export default async function AlunoDashboard() {
                             Encontro Especial
                           </span>
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            jaFez ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                            jaFez
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {jaFez ? '✓ Enviado' : '● Aguardando'}
+                            {jaFez ? '✓ Enviado' : '● Aberto'}
                           </span>
                         </div>
                         <p className="text-sm font-semibold text-gray-800">
-                          {label} — Prob. {prob.numero}{prob.nome ? ` — ${prob.nome}` : ''}
+                          {label} — P{String(prob.numero).padStart(2,'0')}
+                          {prob.nome ? ` — ${prob.nome}` : ''}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">
                           {mod.nome} · {mod.tutoria} · Turma {mod.turma} · Prof. {mod.tutor.nome}
                         </p>
+                        {ee.observacao && (
+                          <p className="text-xs text-gray-400 italic mt-1">{ee.observacao}</p>
+                        )}
                       </div>
                       {!jaFez && (
                         <a
@@ -234,6 +282,7 @@ export default async function AlunoDashboard() {
             </div>
           </section>
         )}
+
       </main>
     </div>
   )

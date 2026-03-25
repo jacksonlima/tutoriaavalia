@@ -83,6 +83,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.log('[auth][signIn] sem restrição de domínio — qualquer email aceito')
       }
 
+      // Determina papel pelo domínio: prof.cesupa.br → TUTOR, demais → ALUNO
+      const dominio      = (user.email.split('@')[1] ?? '').toLowerCase()
+      const papelInicial = dominio === 'prof.cesupa.br' ? Papel.TUTOR : Papel.ALUNO
+      console.log(`[auth][signIn] domínio=${dominio} → papel=${papelInicial}`)
+
       // Salva no banco (erro não bloqueia o login)
       try {
         const { prisma } = await import('@/lib/db')
@@ -92,11 +97,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             nome:      user.name      ?? user.email.split('@')[0],
             avatarUrl: user.image     ?? null,
             googleSub: account?.providerAccountId ?? null,
+            papel:     papelInicial,
           },
           create: {
             email:     user.email,
             nome:      user.name      ?? user.email.split('@')[0],
-            papel:     Papel.ALUNO,
+            papel:     papelInicial,
             avatarUrl: user.image     ?? null,
             googleSub: account?.providerAccountId ?? null,
           },

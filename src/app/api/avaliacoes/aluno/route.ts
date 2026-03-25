@@ -29,13 +29,18 @@ export async function POST(req: NextRequest) {
   // o encontro usando o toggle no painel.
   const problema = await prisma.problema.findUnique({
     where:  { id: problemaId },
-    // Seleciona apenas os campos de ativação para não misturar com dados de avaliação
     select: {
       aberturaAtiva:    true,
       fechamentoAtivo:  true,
       fechamentoAAtivo: true,
       fechamentoBAtivo: true,
-      modulo:           { select: { ativo: true, arquivado: true } },
+      modulo: {
+        select: {
+          ativo:     true,
+          arquivado: true,
+          matriculas: { where: { usuarioId: session.user.id }, select: { id: true } },
+        },
+      },
     },
   })
 
@@ -45,8 +50,24 @@ export async function POST(req: NextRequest) {
 
   // Módulo precisa estar ativo e não arquivado
   if (!problema.modulo.ativo || problema.modulo.arquivado) {
+    return NextResponse.json({ error: 'Este módulo não está ativo.' }, { status: 403 })
+  }
+
+  // Verifica se o aluno pertence ao grupo: matriculado OU visitante via EncontroEspecial
+  const estaMatriculado = problema.modulo.matriculas.length > 0
+  const estaVisitando   = !estaMatriculado
+    ? await prisma.encontroEspecial.findFirst({
+        where: {
+          alunoId:           session.user.id,
+          problemaDestinoId: problemaId,
+          tipoEncontro:      tipoEncontro,
+        },
+      })
+    : null
+
+  if (!estaMatriculado && !estaVisitando) {
     return NextResponse.json(
-      { error: 'Este módulo não está ativo.' },
+      { error: 'Você não está matriculado nem foi alocado para este encontro.' },
       { status: 403 }
     )
   }
