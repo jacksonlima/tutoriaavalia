@@ -3,20 +3,52 @@ import { avaliacaoTutorSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
 
-// Verifica se o usuário logado é titular OU co-tutor do módulo do problema
+// Verifica se userId pode avaliar aquele problema/encontro:
+// - Titular do módulo: acesso total
+// - Co-tutor: acesso apenas às permissões definidas pelo titular
+async function podeAvaliar(
+  prisma: any,
+  problemaId: string,
+  tipoEncontro: string,
+  userId: string
+): Promise<boolean> {
+  const problema = await prisma.problema.findUnique({
+    where:   { id: problemaId },
+    include: {
+      modulo: {
+        include: {
+          coTutores: {
+            where:   { tutorId: userId },
+            include: { permissoes: true },
+          },
+        },
+      },
+    },
+  })
+  if (!problema) return false
+  // Titular tem acesso total
+  if (problema.modulo.tutorId === userId) return true
+  // Co-tutor: verifica permissão específica
+  const ct = problema.modulo.coTutores[0]
+  if (!ct) return false
+  return ct.permissoes.some(
+    (p: any) => p.problemaId === problemaId && p.tipoEncontro === tipoEncontro
+  )
+}
+
+// Compatibilidade com toggle de encontro (sem tipoEncontro específico)
 async function isTutorOuCoTutor(
   prisma: any,
   problemaId: string,
   userId: string
 ): Promise<boolean> {
   const problema = await prisma.problema.findUnique({
-    where: { id: problemaId },
-    include: { modulo: { include: { coTutores: true } } },
+    where:   { id: problemaId },
+    include: { modulo: { include: { coTutores: { where: { tutorId: userId } } } } },
   })
   if (!problema) return false
-  const modulo = problema.modulo
-  if (modulo.tutorId === userId) return true
-  return modulo.coTutores.some((ct: any) => ct.tutorId === userId)
+  if (problema.modulo.tutorId === userId) return true
+  return problema.modulo.coTutores.length > 0
 }
 
 
@@ -39,10 +71,10 @@ export async function POST(req: NextRequest) {
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
 
-  // Verifica que o usuário é titular OU co-tutor (substituto) do módulo
-  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session.user.id)
+  // Verifica permissão granular (titular = tudo, co-tutor = só o que foi autorizado)
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session.user.id)
   if (!autorizado) {
-    return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }
 
   // Upsert de cada avaliação: professor pode salvar e sobrescrever quantas vezes quiser.
@@ -100,10 +132,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'problemaId e tipoEncontro são obrigatórios' }, { status: 400 })
   }
 
-  // Verifica acesso: titular ou co-tutor
-  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session.user.id)
+  // Verifica permissão granular
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session.user.id)
   if (!autorizado) {
-    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }
 
   const avaliacoes = await prisma.avaliacaoTutor.findMany({

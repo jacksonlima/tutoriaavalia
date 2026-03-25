@@ -16,7 +16,8 @@ type Problema = {
   fechamentoBAtivo: boolean
 }
 
-type CoTutorItem = { id: string; tutorId: string; tutor: { nome: string; email: string } }
+type CoTutorPermItem = { id: string; problemaId: string; tipoEncontro: string }
+type CoTutorItem = { id: string; tutorId: string; tutor: { nome: string; email: string }; permissoes?: CoTutorPermItem[] }
 
 type ModuloCardProps = {
   modulo: {
@@ -39,11 +40,19 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   const [expandido, setExpandido]       = useState(false)
   const [confirmando, setConfirmando]   = useState<'excluir' | 'arquivar' | null>(null)
   const [processando, setProcessando]   = useState(false)
-  // Co-tutores (substitutos) — só carregado quando o titular expande o card
-  const [coTutores,     setCoTutores]     = useState<CoTutorItem[]>([])
-  const [gerenciando,   setGerenciando]   = useState(false)  // painel aberto/fechado
-  const [emailSubst,    setEmailSubst]    = useState('')
-  const [addingSubst,   setAddingSubst]   = useState(false)
+  // Co-tutores
+  const [coTutores,   setCoTutores]   = useState<CoTutorItem[]>([])
+  const [gerenciando, setGerenciando] = useState(false)
+  // Wizard para adicionar substituto
+  const [passo,       setPasso]       = useState<'email'|'permissoes'>('email')
+  const [emailSubst,  setEmailSubst]  = useState('')
+  const [docEncontrado, setDocEncontrado] = useState<{nome:string;email:string}|null>(null)
+  const [permsWizard, setPermsWizard] = useState<{problemaId:string;tipoEncontro:string}[]>([])
+  const [buscando,    setBuscando]    = useState(false)
+  const [salvando,    setSalvando]    = useState(false)
+  // Edição inline de permissões
+  const [editandoId,  setEditandoId]  = useState<string|null>(null)
+  const [permsEdit,   setPermsEdit]   = useState<{problemaId:string;tipoEncontro:string}[]>([])
   const { toast } = useToast()
   const router = useRouter()
 
@@ -112,35 +121,105 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     </button>
   )
 
-  // Carrega co-tutores quando titular expande o card
+  // ── Helpers de permissão ────────────────────────────────────
+  const tiposDisponiveis = (prob: Problema) => {
+    const tipos: {value:string; label:string}[] = []
+    if (prob.aberturaAtiva || true)   tipos.push({ value:'ABERTURA',    label:'Abertura' })
+    if (prob.temSaltoTriplo) {
+      tipos.push({ value:'FECHAMENTO_A', label:'Fechamento A (ST)' })
+      tipos.push({ value:'FECHAMENTO_B', label:'Fechamento B (ST)' })
+    } else {
+      tipos.push({ value:'FECHAMENTO',   label:'Fechamento' })
+    }
+    return tipos
+  }
+
+  const togglePerm = (
+    list: {problemaId:string;tipoEncontro:string}[],
+    setList: (v:any)=>void,
+    problemaId: string,
+    tipoEncontro: string
+  ) => {
+    const key = `${problemaId}|${tipoEncontro}`
+    const exists = list.some(p => `${p.problemaId}|${p.tipoEncontro}` === key)
+    if (exists) setList(list.filter(p => `${p.problemaId}|${p.tipoEncontro}` !== key))
+    else        setList([...list, { problemaId, tipoEncontro }])
+  }
+
+  // ── Expandir card + carregar co-tutores ──────────────────────
   const handleExpandir = async () => {
     const novo = !expandido
     setExpandido(novo)
     if (novo && isTitular && coTutores.length === 0) {
       try {
-        const res = await fetch(`/api/co-tutores?moduloId=${modulo.id}`)
+        const res  = await fetch(`/api/co-tutores?moduloId=${modulo.id}`)
         const data = await res.json()
         if (Array.isArray(data)) setCoTutores(data)
       } catch {}
     }
   }
 
-  const adicionarSubstituto = async () => {
+  // ── Passo 1: busca o docente pelo email ──────────────────────
+  const buscarDocente = async () => {
     if (!emailSubst.trim()) return
-    setAddingSubst(true)
+    setBuscando(true)
+    try {
+      const res  = await fetch('/api/usuarios/buscar?email=' + encodeURIComponent(emailSubst.trim()))
+      const data = await res.json()
+      if (!res.ok || !data.id) {
+        toast({ title: 'Não encontrado', description: data.error ?? 'Docente não cadastrado', variant: 'destructive' })
+        return
+      }
+      if (data.papel !== 'TUTOR') {
+        toast({ title: 'Inválido', description: 'Este usuário não é docente.', variant: 'destructive' })
+        return
+      }
+      setDocEncontrado({ nome: data.nome, email: data.email })
+      setPermsWizard([])
+      setPasso('permissoes')
+    } finally { setBuscando(false) }
+  }
+
+  // ── Passo 2: salva co-tutor com permissões ───────────────────
+  const salvarSubstituto = async () => {
+    if (permsWizard.length === 0) {
+      toast({ title: 'Selecione ao menos uma permissão', variant: 'destructive' }); return
+    }
+    setSalvando(true)
     try {
       const res  = await fetch('/api/co-tutores', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduloId: modulo.id, email: emailSubst.trim() }),
+        body: JSON.stringify({ moduloId: modulo.id, email: emailSubst.trim(), permissoes: permsWizard }),
       })
       const data = await res.json()
       if (!res.ok) { toast({ title: 'Erro', description: data.error, variant: 'destructive' }); return }
-      setCoTutores((prev) => [...prev, data])
-      setEmailSubst('')
-      toast({ title: 'Substituto adicionado', description: data.tutor.nome })
-    } finally { setAddingSubst(false) }
+      setCoTutores((prev) => {
+        const sem = prev.filter(ct => ct.tutorId !== data.tutorId)
+        return [...sem, data]
+      })
+      setEmailSubst(''); setDocEncontrado(null); setPermsWizard([]); setPasso('email')
+      toast({ title: '✅ Substituto adicionado', description: data.tutor.nome })
+    } finally { setSalvando(false) }
   }
 
+  // ── Salvar edição de permissões de um co-tutor existente ─────
+  const salvarEdicao = async (coTutorId: string) => {
+    setSalvando(true)
+    try {
+      const res = await fetch('/api/co-tutores', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coTutorId, permissoes: permsEdit }),
+      })
+      if (!res.ok) { toast({ title: 'Erro ao salvar', variant: 'destructive' }); return }
+      setCoTutores((prev) => prev.map(ct =>
+        ct.id === coTutorId ? { ...ct, permissoes: permsEdit as any } : ct
+      ))
+      setEditandoId(null)
+      toast({ title: 'Permissões atualizadas' })
+    } finally { setSalvando(false) }
+  }
+
+  // ── Remover substituto ────────────────────────────────────────
   const removerSubstituto = async (tutorId: string, nome: string) => {
     await fetch('/api/co-tutores', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -271,7 +350,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setGerenciando(!gerenciando) }}
+                onClick={(e) => { e.stopPropagation(); setGerenciando(!gerenciando); setPasso('email'); setDocEncontrado(null) }}
                 className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
               >
                 <span className="font-medium text-gray-700">
@@ -286,53 +365,204 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
               </button>
 
               {gerenciando && (
-                <div className="px-4 py-3 space-y-2 bg-white">
-                  {/* Lista de substitutos */}
-                  {coTutores.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1">Nenhum substituto adicionado.</p>
-                  ) : (
-                    <div className="space-y-1.5">
+                <div className="px-4 py-3 space-y-3 bg-white" onClick={(e) => e.stopPropagation()}>
+
+                  {/* ── Lista de substitutos cadastrados ── */}
+                  {coTutores.length > 0 && (
+                    <div className="space-y-2">
                       {coTutores.map((ct) => (
-                        <div key={ct.id} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
-                          <div>
-                            <p className="text-xs font-semibold text-gray-800">{ct.tutor.nome}</p>
-                            <p className="text-xs text-gray-400">{ct.tutor.email}</p>
+                        <div key={ct.id} className="border border-amber-200 rounded-lg overflow-hidden">
+                          {/* Cabeçalho do co-tutor */}
+                          <div className="flex items-center justify-between bg-amber-50 px-3 py-2">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-800">{ct.tutor.nome}</p>
+                              <p className="text-xs text-gray-400">{ct.tutor.email}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editandoId === ct.id) { setEditandoId(null) }
+                                  else {
+                                    setEditandoId(ct.id)
+                                    setPermsEdit((ct.permissoes ?? []).map((p:any) => ({
+                                      problemaId: p.problemaId, tipoEncontro: p.tipoEncontro
+                                    })))
+                                  }
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                {editandoId === ct.id ? 'Cancelar' : '✏️ Editar'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removerSubstituto(ct.tutorId, ct.tutor.nome)}
+                                className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
+                              >
+                                Remover
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removerSubstituto(ct.tutorId, ct.tutor.nome) }}
-                            className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50"
-                          >
-                            Remover
-                          </button>
+
+                          {/* Permissões: visualização ou edição */}
+                          {editandoId !== ct.id ? (
+                            <div className="px-3 py-2">
+                              <p className="text-xs text-gray-500 font-medium mb-1">Permissões:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {(ct.permissoes ?? []).map((p:any) => (
+                                  <span key={`${p.problemaId}|${p.tipoEncontro}`}
+                                    className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                    P{problemas.find(x=>x.id===p.problemaId)?.numero ?? '?'} — {
+                                      p.tipoEncontro === 'ABERTURA'    ? 'Ab' :
+                                      p.tipoEncontro === 'FECHAMENTO'  ? 'Fe' :
+                                      p.tipoEncontro === 'FECHAMENTO_A'? 'FeA':
+                                      p.tipoEncontro === 'FECHAMENTO_B'? 'FeB': p.tipoEncontro
+                                    }
+                                  </span>
+                                ))}
+                                {(!ct.permissoes || ct.permissoes.length === 0) && (
+                                  <span className="text-xs text-gray-400 italic">Nenhuma permissão</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="px-3 py-2 space-y-2">
+                              <p className="text-xs text-gray-500 font-medium">Editar permissões:</p>
+                              {problemas.map((prob) => (
+                                <div key={prob.id}>
+                                  <p className="text-xs font-medium text-gray-700 mb-1">
+                                    P{String(prob.numero).padStart(2,'0')} {prob.nome ? `— ${prob.nome}` : ''}
+                                    {prob.temSaltoTriplo && <span className="ml-1 bg-[#1F4E79] text-white text-xs px-1 rounded">ST</span>}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1.5 pl-2">
+                                    {tiposDisponiveis(prob).map(({value,label}) => {
+                                      const checked = permsEdit.some(p=>p.problemaId===prob.id&&p.tipoEncontro===value)
+                                      return (
+                                        <label key={value} className="flex items-center gap-1 cursor-pointer">
+                                          <input type="checkbox" checked={checked}
+                                            onChange={() => togglePerm(permsEdit, setPermsEdit, prob.id, value)}
+                                            className="rounded border-gray-300 text-amber-500" />
+                                          <span className="text-xs text-gray-600">{label}</span>
+                                        </label>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={salvando}
+                                onClick={() => salvarEdicao(ct.id)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 rounded-lg disabled:opacity-40"
+                              >
+                                {salvando ? 'Salvando...' : '💾 Salvar permissões'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Adicionar substituto */}
-                  <div className="flex gap-2 pt-1">
-                    <input
-                      type="email"
-                      value={emailSubst}
-                      onChange={(e) => setEmailSubst(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); adicionarSubstituto() } }}
-                      placeholder="email@prof.cesupa.br"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                    <button
-                      type="button"
-                      disabled={addingSubst || !emailSubst.trim()}
-                      onClick={(e) => { e.stopPropagation(); adicionarSubstituto() }}
-                      className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 whitespace-nowrap"
-                    >
-                      {addingSubst ? '...' : '+ Adicionar'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    O substituto precisa ter feito login no sistema pelo menos uma vez.
-                  </p>
+                  {/* ── Divider ── */}
+                  {coTutores.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-xs text-gray-400">adicionar novo</span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                  )}
+
+                  {/* ── Wizard: Passo 1 — Email ── */}
+                  {passo === 'email' && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-700">Email do docente substituto:</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          value={emailSubst}
+                          onChange={(e) => setEmailSubst(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); buscarDocente() } }}
+                          placeholder="email@prof.cesupa.br"
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                        <button
+                          type="button"
+                          disabled={buscando || !emailSubst.trim()}
+                          onClick={buscarDocente}
+                          className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 whitespace-nowrap"
+                        >
+                          {buscando ? '...' : 'Buscar →'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        O docente precisa ter feito login no sistema pelo menos uma vez.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ── Wizard: Passo 2 — Permissões ── */}
+                  {passo === 'permissoes' && docEncontrado && (
+                    <div className="space-y-3 border border-amber-200 rounded-xl p-3 bg-amber-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">{docEncontrado.nome}</p>
+                          <p className="text-xs text-gray-500">{docEncontrado.email}</p>
+                        </div>
+                        <button type="button" onClick={() => { setPasso('email'); setDocEncontrado(null) }}
+                          className="text-xs text-gray-400 hover:text-gray-600">← Voltar</button>
+                      </div>
+
+                      <p className="text-xs font-semibold text-gray-700">
+                        Selecione quais encontros o substituto pode avaliar:
+                      </p>
+
+                      <div className="space-y-2.5">
+                        {problemas.map((prob) => (
+                          <div key={prob.id} className="bg-white rounded-lg px-3 py-2 border border-gray-200">
+                            <p className="text-xs font-medium text-gray-700 mb-1.5">
+                              Problema {String(prob.numero).padStart(2,'0')}
+                              {prob.nome ? ` — ${prob.nome}` : ''}
+                              {prob.temSaltoTriplo && (
+                                <span className="ml-1.5 bg-[#1F4E79] text-white text-xs px-1.5 py-0.5 rounded font-bold">ST</span>
+                              )}
+                            </p>
+                            <div className="flex flex-wrap gap-3">
+                              {tiposDisponiveis(prob).map(({value, label}) => {
+                                const checked = permsWizard.some(p=>p.problemaId===prob.id&&p.tipoEncontro===value)
+                                return (
+                                  <label key={value} className="flex items-center gap-1.5 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => togglePerm(permsWizard, setPermsWizard, prob.id, value)}
+                                      className="rounded border-gray-300 text-amber-500 focus:ring-amber-400"
+                                    />
+                                    <span className="text-xs text-gray-700">{label}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <span className="text-xs text-gray-500 flex-1">
+                          {permsWizard.length} encontro{permsWizard.length !== 1 ? 's' : ''} selecionado{permsWizard.length !== 1 ? 's' : ''}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={salvando || permsWizard.length === 0}
+                          onClick={salvarSubstituto}
+                          className="bg-[#1F4E79] hover:bg-[#163d61] text-white text-xs px-4 py-1.5 rounded-lg disabled:opacity-40"
+                        >
+                          {salvando ? 'Salvando...' : '✅ Confirmar substituto'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>
