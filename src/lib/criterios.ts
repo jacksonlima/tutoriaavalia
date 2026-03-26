@@ -1,4 +1,9 @@
 /**
+ * TutoriaAvalia v2
+ * Autor: Jackson Lima — CESUPA
+ * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ */
+/**
  * criterios.ts
  * Definição centralizada dos critérios de avaliação, seus nomes,
  * opções de nota e tipo de encontro.

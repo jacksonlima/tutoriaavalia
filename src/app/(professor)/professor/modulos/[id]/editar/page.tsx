@@ -8,7 +8,7 @@ import { OPCOES_TUTORIA, OPCOES_TURMA } from '@/lib/validations'
 import { EmailAutocomplete } from '@/components/ui/EmailAutocomplete'
 
 type Problema  = { id: string; numero: number; nome: string | null; temSaltoTriplo: boolean }
-type Matricula = { id: string; usuario: { id: string; nome: string; email: string }; numeraNaTurma: number }
+type Matrícula = { id: string; usuario: { id: string; nome: string; email: string }; numeraNaTurma: number }
 type Modulo = {
   id:            string
   nome:          string
@@ -16,7 +16,7 @@ type Modulo = {
   tutoria:       string
   turma:         string
   problemas:     Problema[]
-  matriculas:    Matricula[]
+  matrículas:    Matrícula[]
 }
 
 export default function EditarModuloPage() {
@@ -49,7 +49,7 @@ export default function EditarModuloPage() {
         setAno(data.ano)
         setTutoria(data.tutoria)
         setTurma(data.turma)
-        setEmailsAlunos(data.matriculas.map((m) => m.usuario.email))
+        setEmailsAlunos(data.matrículas.map((m) => m.usuario.email))
         setNomesProblemas(data.problemas.map((p) => p.nome ?? ''))
         setCarregando(false)
       })
@@ -125,7 +125,7 @@ export default function EditarModuloPage() {
         <main className="max-w-lg mx-auto px-4 py-20 text-center">
           <div className="text-6xl mb-4">✅</div>
           <h1 className="text-xl font-bold text-gray-800">Módulo atualizado!</h1>
-          <p className="text-sm text-gray-400 mt-2">Redirecionando...</p>
+          <p className="text-sm text-gray-400 mt-2">Redirecionando para o painel...</p>
         </main>
       </div>
     )
@@ -237,9 +237,9 @@ export default function EditarModuloPage() {
             ) : (
               <ul className="space-y-1.5">
                 {emailsAlunos.map((email, idx) => {
-                  const matricula = modulo?.matriculas.find((m) => m.usuario.email === email)
-                  const nome      = matricula?.usuario.nome ?? email.split('@')[0]
-                  const ehNovo    = !modulo?.matriculas.find((m) => m.usuario.email === email)
+                  const matrícula = modulo?.matrículas.find((m) => m.usuario.email === email)
+                  const nome      = matrícula?.usuario.nome ?? email.split('@')[0]
+                  const ehNovo    = !modulo?.matrículas.find((m) => m.usuario.email === email)
 
                   return (
                     <li
@@ -300,11 +300,11 @@ export default function EditarModuloPage() {
             )}
 
             {/* Lista de alunos que serão removidos */}
-            {modulo && modulo.matriculas.some((m) => !emailsAlunos.includes(m.usuario.email)) && (
+            {modulo && modulo.matrículas.some((m) => !emailsAlunos.includes(m.usuario.email)) && (
               <div className="mt-3 bg-red-50 border border-red-100 rounded-lg p-3">
                 <p className="text-xs font-semibold text-red-700 mb-1">Serão removidos do módulo:</p>
                 <ul className="space-y-0.5">
-                  {modulo.matriculas
+                  {modulo.matrículas
                     .filter((m) => !emailsAlunos.includes(m.usuario.email))
                     .map((m) => (
                       <li key={m.id} className="text-xs text-red-600">

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const moduloId = searchParams.get('moduloId')
-  if (!moduloId) return NextResponse.json({ error: 'moduloId obrigatorio' }, { status: 400 })
+  if (!moduloId) return NextResponse.json({ error: 'moduloId obrigatório' }, { status: 400 })
 
   const modulo = await prisma.modulo.findUnique({
     where: { id: moduloId },
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   })
   // Verifica se é titular ou co-tutor
   if (!modulo) {
-    return NextResponse.json({ error: 'Modulo nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
   if (modulo.tutorId !== session.user.id) {
     const { prisma: p2 } = await import('@/lib/db')

@@ -13,7 +13,7 @@ export default async function ProfessorDashboard() {
 
   const include = {
     problemas: { orderBy: { numero: 'asc' } },
-    _count: { select: { matriculas: true } },
+    _count: { select: { matrículas: true } },
   } as const
 
   // Módulos onde é titular

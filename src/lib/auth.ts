@@ -1,3 +1,8 @@
+/**
+ * TutoriaAvalia v2
+ * Autor: Jackson Lima — CESUPA
+ * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ */
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Credentials from 'next-auth/providers/credentials'

@@ -66,7 +66,7 @@ function AvaliarTutorPageInner() {
 
   useEffect(() => {
     if (!problemaId) return
-    fetch('/api/avaliacoes/tutor?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
+    fetch('/api/avaliações/tutor?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
       .then((r) => r.json())
       .then(async (data: any[]) => {
         if (data.length > 0) {
@@ -88,7 +88,7 @@ function AvaliarTutorPageInner() {
           for (const m of modulos) {
             const prob = m.problemas?.find((p: any) => p.id === problemaId)
             if (prob) {
-              const alunosDoModulo: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
+              const alunosDoModulo: Aluno[] = m.matrículas.map((ma: any) => ma.usuario)
 
               // Busca alunos visitantes (encontros especiais apontando para este problema)
               let visitantes: Aluno[] = []
@@ -127,11 +127,11 @@ function AvaliarTutorPageInner() {
   const salvar = async () => {
     setSalvando(true)
     try {
-      const res = await fetch('/api/avaliacoes/tutor', {
+      const res = await fetch('/api/avaliações/tutor', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         // finalizar=false: professor pode sempre modificar as notas posteriormente
-        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliacoes: Object.values(notas) }),
+        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliações: Object.values(notas) }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       toast({ title: 'Notas salvas com sucesso' })
@@ -154,7 +154,7 @@ function AvaliarTutorPageInner() {
 
         <div className="mb-5">
           <h1 className="text-xl font-bold text-[#1F4E79]">
-            {problemaNome || 'Avaliacao'} — {labelTipo}
+            {problemaNome || 'Avaliação'} — {labelTipo}
           </h1>
 
         </div>

@@ -1,4 +1,9 @@
 /**
+ * TutoriaAvalia v2
+ * Autor: Jackson Lima — CESUPA
+ * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ */
+/**
  * notas.ts
  * ─────────────────────────────────────────────────────────────────
  * Lógica de cálculo de notas — migração fiel das fórmulas do Google Sheets.

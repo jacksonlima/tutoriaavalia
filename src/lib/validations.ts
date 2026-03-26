@@ -1,3 +1,8 @@
+/**
+ * TutoriaAvalia v2
+ * Autor: Jackson Lima — CESUPA
+ * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ */
 import { z } from 'zod'
 
 // Nota para criterios (0-5), aceita valores do dropdown incluindo 4.5
@@ -14,20 +19,50 @@ const atitudesSchema = z
 
 // Opções fixas de tutoria
 export const OPCOES_TUTORIA = [
-  'Tutoria 1',  'Tutoria 2',  'Tutoria 3',  'Tutoria 4',
-  'Tutoria 5',  'Tutoria 6',  'Tutoria 7',  'Tutoria 8',
-  'Tutoria 9',  'Tutoria 10', 'Tutoria 11', 'Tutoria 12',
-  'Tutoria 13', 'Tutoria 14', 'Tutoria 15', 'Tutoria 16',
+  'Tutoria 1', 'Tutoria 2', 'Tutoria 3', 'Tutoria 4',
+  'Tutoria 5', 'Tutoria 6', 'Tutoria 7', 'Tutoria 8',
   'Tutoria Extra 1', 'Tutoria Extra 2', 'Tutoria Extra 3',
 ] as const
 
 // Opções fixas de turma
 export const OPCOES_TURMA = ['MD1','MD2','MD3','MD4','MD5','MD6','MD7','MD8'] as const
 
+// Opções de semestre
+export const OPCOES_SEMESTRE = ['01', '02'] as const
+
+// Nomes dos módulos — lista oficial CESUPA
+export const OPCOES_MODULO = [
+  'I - Introdução ao Estudo da Medicina',
+  'II - Implicações no Crescimento e Diferenciação Celular',
+  'III - Ataque e Defesa',
+  'IV - Sistema Nervoso',
+  'V - Locomoção',
+  'VI - Pele e Anexos',
+  'VII - Sistema Cardiovascular',
+  'VIII - Sistema Respiratório',
+  'IX - Sistema Urinário',
+  'X - Sistema Endocrinológico',
+  'XI - Sistema Digestório',
+  'XII - Sistema Hematológico',
+  'XIII - Nascimento, Crescimento e Desenvolvimento',
+  'XIV - Reprodução e Sexualidade',
+  'XV - Envelhecimento',
+  'XVI - Bases Bioquímicas e Terapêuticas',
+  'XVII - Mente e Cérebro',
+  'XVIII - Medicina Baseada em Evidências',
+  'XIX - Apresentações Clínicas 1',
+  'XX - Apresentações Clínicas 2',
+  'XXI - Apresentações Clínicas 3',
+  'XXII - Apresentações Clínicas 4: Urgência e Emergência',
+  'XXIII - Apresentações Clínicas 5: Clínica Pediátrica',
+  'XXIV - Apresentações Clínicas 6: Ginecologia e Obstetrícia',
+] as const
+
 // ── Módulo ────────────────────────────────────────────────────────
 export const criarModuloSchema = z.object({
-  nome:      z.string().min(3, 'Nome muito curto').max(120),
+  nome:      z.enum(OPCOES_MODULO, { required_error: 'Selecione o módulo' }),
   ano:       z.number().int().min(2020).max(2100),
+  semestre:  z.enum(OPCOES_SEMESTRE, { required_error: 'Selecione o semestre' }),
   tutoria:   z.enum(OPCOES_TUTORIA, { required_error: 'Selecione a tutoria' }),
   turma:     z.enum(OPCOES_TURMA,   { required_error: 'Selecione a turma'  }),
 
@@ -51,8 +86,9 @@ export type CriarModuloInput = z.infer<typeof criarModuloSchema>
 
 // ── Editar Módulo (todos os campos opcionais exceto os de identidade) ─────────
 export const editarModuloSchema = z.object({
-  nome:     z.string().min(3, 'Nome muito curto').max(120),
+  nome:     z.enum(OPCOES_MODULO, { required_error: 'Selecione o módulo' }),
   ano:      z.number().int().min(2020).max(2100),
+  semestre: z.enum(OPCOES_SEMESTRE, { required_error: 'Selecione o semestre' }).optional(),
   tutoria:  z.enum(OPCOES_TUTORIA, { required_error: 'Selecione a tutoria' }),
   turma:    z.enum(OPCOES_TURMA,   { required_error: 'Selecione a turma'  }),
 
