@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
+import { useContadorSubmissoes } from '@/hooks/useContadorSubmissoes'
 
 type Problema = {
   id: string
@@ -65,6 +66,9 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   const [salvandoEE,    setSalvandoEE]    = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+
+  // Contadores de submissão — atualiza a cada 60s quando o card está expandido
+  const { getContador } = useContadorSubmissoes(modulo.id, expandido)
 
   const toggleEncontro = async (
     problemaId: string,
@@ -352,7 +356,12 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
               <div className="space-y-1.5">
                 {/* Abertura */}
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-xs text-gray-600 font-medium">Abertura</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600 font-medium">Abertura</span>
+                    {(() => { const c = getContador(prob.id, 'ABERTURA'); return c ? (
+                      <ContadorBadge enviadas={c.enviadas} total={c.total} ativo={c.ativo} />
+                    ) : null })()}
+                  </div>
                   <div className="flex items-center gap-2">
                     {prob.aberturaAtiva && (
                       <Link
@@ -375,7 +384,12 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                       const label = tipo === 'FECHAMENTO_A' ? 'Fechamento A' : 'Fechamento B'
                       return (
                         <div key={tipo} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                          <span className="text-xs text-amber-700 font-medium">{label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-amber-700 font-medium">{label}</span>
+                            {(() => { const c = getContador(prob.id, tipo); return c ? (
+                              <ContadorBadge enviadas={c.enviadas} total={c.total} ativo={c.ativo} />
+                            ) : null })()}
+                          </div>
                           <div className="flex items-center gap-2">
                             {ativo && (
                               <Link
@@ -394,7 +408,12 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                   </>
                 ) : (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-xs text-gray-600 font-medium">Fechamento</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 font-medium">Fechamento</span>
+                      {(() => { const c = getContador(prob.id, 'FECHAMENTO'); return c ? (
+                        <ContadorBadge enviadas={c.enviadas} total={c.total} ativo={c.ativo} />
+                      ) : null })()}
+                    </div>
                     <div className="flex items-center gap-2">
                       {prob.fechamentoAtivo && (
                         <Link
@@ -730,3 +749,34 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     </div>
   )
 }
+
+// ── ContadorBadge — mostra X/Total de submissões ─────────────────────────
+
+function ContadorBadge({
+  enviadas,
+  total,
+  ativo,
+}: {
+  enviadas: number
+  total:    number
+  ativo:    boolean
+}) {
+  if (!ativo && enviadas === 0) return null
+  const completo = total > 0 && enviadas >= total
+
+  return (
+    <span
+      title={`${enviadas} de ${total} alunos enviaram`}
+      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+        completo
+          ? 'bg-green-100 text-green-700'
+          : ativo
+          ? 'bg-blue-100 text-blue-700'
+          : 'bg-gray-100 text-gray-500'
+      }`}
+    >
+      {enviadas}/{total}
+    </span>
+  )
+}
+

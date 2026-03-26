@@ -50,6 +50,7 @@ model Usuario {
   avaliacoesFeitas    AvaliacaoAluno[] @relation("Avaliador")
   avaliacoesRecebidas AvaliacaoAluno[] @relation("Avaliado")
   submissoes          Submissao[]
+  notificacoes        Notificacao[]
 
   @@map("usuarios")
 }
@@ -262,4 +263,25 @@ model Submissao {
 
   @@unique([problemaId, avaliadorId, tipoEncontro])
   @@map("submissoes")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICAÇÕES
+// ─────────────────────────────────────────────
+// Criadas automaticamente quando um aluno envia avaliação.
+// Destinadas ao tutor titular e co-tutores com permissão.
+
+model Notificacao {
+  id           String   @id @default(uuid())
+  tutorId      String   @map("tutor_id")
+  titulo       String
+  mensagem     String
+  problemaId   String?  @map("problema_id")
+  tipoEncontro String?  @map("tipo_encontro")
+  lida         Boolean  @default(false)
+  criadaEm     DateTime @default(now()) @map("criada_em")
+
+  tutor        Usuario  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@map("notificacoes")
 }

@@ -1,6 +1,6 @@
 # TutoriaAvalia v2
 
-**Autor:** Jackson Lima
+**Autor:** Jackson Lima — CESUPA  
 **Contato:** jackson.lima@prof.cesupa.br
 
 Sistema web de avaliação formativa para Aprendizagem Baseada em Problemas (ABP).  
@@ -163,4 +163,4 @@ npx prisma db push   # Sincronizar schema com o banco
 
 ---
 
-*© 2026 Jackson Lima. Sistema desenvolvido para uso acadêmico interno.*
+*© 2026 Jackson Lima — CESUPA. Sistema desenvolvido para uso acadêmico interno.*
