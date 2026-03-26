@@ -83,7 +83,7 @@ function RealocarPageInner() {
       fetch(`/api/encontros-especiais?moduloId=${moduloId}`).then((r) => r.json()),
     ]).then(([mod, pares, ees]) => {
       setModulo(mod)
-      setAlunos((mod.matrículas ?? []).map((m: any) => m.usuario))
+      setAlunos((mod.matriculas ?? []).map((m: any) => m.usuario))
       setTutoriasPares(Array.isArray(pares) ? pares : [])
       setExistentes(Array.isArray(ees) ? ees : [])
       setCarregando(false)

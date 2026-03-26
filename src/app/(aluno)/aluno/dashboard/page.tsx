@@ -10,7 +10,7 @@ export default async function AlunoDashboard() {
   const session = await auth()
   if (!session || session.user.papel !== 'ALUNO') redirect('/login')
 
-  const matrícula = await prisma.matrícula.findFirst({
+  const matricula = await prisma.matricula.findFirst({
     where: { usuarioId: session.user.id },
     include: {
       modulo: {
@@ -22,7 +22,7 @@ export default async function AlunoDashboard() {
     },
   })
 
-  const modulo = matrícula?.modulo?.ativo ? matrícula.modulo : null
+  const modulo = matricula?.modulo?.ativo ? matricula.modulo : null
 
   if (!modulo) {
     return (
@@ -47,7 +47,7 @@ export default async function AlunoDashboard() {
   // Encontros especiais atribuídos a este aluno no módulo de origem
   // Chave de bloqueio: (alunoId, moduloOrigemId, tipoEncontro)
   const encontrosEspeciais = await prisma.encontroEspecial.findMany({
-    where: { alunoId: session.user.id, moduloOrigemId: matrícula.moduloId },
+    where: { alunoId: session.user.id, moduloOrigemId: matricula.moduloId },
     include: {
       problemaDestino: {
         include: {

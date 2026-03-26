@@ -29,7 +29,7 @@ type ModuloCardProps = {
     ativo: boolean
     arquivado: boolean
     problemas: Problema[]
-    _count: { matrículas: number }
+    _count: { matriculas: number }
     tutor?: { nome: string }  // presente apenas nos módulos onde o user é co-tutor
   }
   isTitular: boolean  // true = titular, false = co-tutor/substituto
@@ -324,7 +324,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
           <div>
             <h2 className="font-bold text-gray-800 text-sm">{modulo.nome}</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              {modulo.ano} · {modulo.tutoria} · Turma {modulo.turma} · {modulo._count.matrículas} alunos
+              {modulo.ano} · {modulo.tutoria} · Turma {modulo.turma} · {modulo._count.matriculas} alunos
             </p>
           </div>
           <span className="text-gray-400 text-lg mt-0.5 select-none">

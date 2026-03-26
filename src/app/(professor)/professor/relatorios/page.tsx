@@ -21,7 +21,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
       <div className="min-h-screen bg-gray-50">
         <TopBar nome={session.user.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
         <main className="max-w-lg mx-auto px-4 py-16 text-center">
-          <p className="text-gray-400">Selecione um modulo no painel para ver o relatorio.</p>
+          <p className="text-gray-400">Selecione um módulo no painel para ver o relatório.</p>
         </main>
       </div>
     )
@@ -30,7 +30,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
   const modulo = await prisma.modulo.findUnique({
     where: { id: moduloId },
     include: {
-      matrículas: {
+      matriculas: {
         include: { usuario: { select: { id: true, nome: true } } },
         orderBy:  { numeraNaTurma: 'asc' },
       },
@@ -69,7 +69,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
     return arredondar(nota as number)
   }
 
-  const resumo = modulo.matrículas.map((mat) => {
+  const resumo = modulo.matriculas.map((mat) => {
     const aluno = mat.usuario
     const notasAb: number[] = []
     const notasFe: number[] = []

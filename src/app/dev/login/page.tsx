@@ -1,6 +1,6 @@
 /**
- * PAGINA DE LOGIN DE DESENVOLVIMENTO
- * So funciona em NODE_ENV=development (npm run dev).
+ * PÁGINA DE LOGIN DE DESENVOLVIMENTO
+ * Só funciona em NODE_ENV=development (npm run dev).
  * Acesso: http://localhost:3000/dev/login
  */
 
@@ -13,13 +13,13 @@ export default async function DevLoginPage({
   searchParams: Promise<{ error?: string }>
 }) {
   const { prisma } = await import('@/lib/db')
-  // Bloqueia em producao
+  // Bloqueia em produção
   if (process.env.NODE_ENV !== 'development') {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
           <p className="text-2xl font-bold text-red-400 mb-2">404</p>
-          <p className="text-gray-400">Pagina nao encontrada.</p>
+          <p className="text-gray-400">Página não encontrada.</p>
         </div>
       </main>
     )
@@ -48,7 +48,7 @@ export default async function DevLoginPage({
           </div>
           <p className="text-yellow-200 text-sm">
             Login sem Google OAuth — apenas para testes locais.
-            Esta pagina nao existe em producao.
+            Esta página não existe em produção.
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export default async function DevLoginPage({
 
         <h1 className="text-xl font-bold mb-1">Login de Teste</h1>
         <p className="text-gray-400 text-sm mb-6">
-          Clique em qualquer usuario para entrar como ele instantaneamente.
+          Clique em qualquer usuário para entrar como ele instantaneamente.
         </p>
 
         {/* Professores */}
@@ -128,9 +128,9 @@ export default async function DevLoginPage({
 
         {usuarios.length === 0 && (
           <div className="bg-gray-800 rounded-xl p-8 text-center">
-            <p className="text-gray-400 text-sm mb-3">Nenhum usuario no banco.</p>
+            <p className="text-gray-400 text-sm mb-3">Nenhum usuário no banco.</p>
             <p className="text-gray-500 text-xs">
-              Execute <code className="bg-gray-700 px-1.5 py-0.5 rounded font-mono">npm run db:seed</code> para criar os usuarios de teste.
+              Execute <code className="bg-gray-700 px-1.5 py-0.5 rounded font-mono">npm run db:seed</code> para criar os usuários de teste.
             </p>
           </div>
         )}

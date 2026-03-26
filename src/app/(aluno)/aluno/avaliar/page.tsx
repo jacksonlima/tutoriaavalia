@@ -61,7 +61,7 @@ function AlunoAvaliarPageInner() {
       .then((r) => r.json())
       .then(async (avalData: any) => {
 
-        // ── Busca o grupo completo (matrículados + visitantes) ──────
+        // ── Busca o grupo completo (matriculados + visitantes) ──────
         // Usa a API de grupo que já inclui visitantes para QUALQUER tipo de acesso
         const grupoRes  = await fetch(
           `/api/encontros-especiais/grupo?problemaId=${problemaId}&tipoEncontro=${tipo}`
@@ -80,7 +80,7 @@ function AlunoAvaliarPageInner() {
           for (const m of modulos) {
             const prob = m.problemas?.find((p: any) => p.id === problemaId)
             if (prob) {
-              grupo = m.matrículas.map((ma: any) => ma.usuario)
+              grupo = m.matriculas.map((ma: any) => ma.usuario)
               break
             }
           }

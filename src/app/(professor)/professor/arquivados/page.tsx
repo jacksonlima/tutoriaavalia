@@ -14,11 +14,11 @@ export default async function ModulosArquivadosPage() {
     where:   { tutorId: session.user.id, arquivado: true },
     include: {
       problemas:  { orderBy: { numero: 'asc' } },
-      matrículas: {
+      matriculas: {
         include: { usuario: { select: { id: true, nome: true } } },
         orderBy: { numeraNaTurma: 'asc' },
       },
-      _count: { select: { matrículas: true } },
+      _count: { select: { matriculas: true } },
     },
     orderBy: { atualizadoEm: 'desc' },
   })
@@ -62,7 +62,7 @@ export default async function ModulosArquivadosPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {modulo.ano} · {modulo.tutoria} · Turma {modulo.turma} · {modulo._count.matrículas} alunos
+                      {modulo.ano} · {modulo.tutoria} · Turma {modulo.turma} · {modulo._count.matriculas} alunos
                     </p>
                     <p className="text-xs text-gray-300 mt-0.5">
                       {modulo.problemas.length} problema{modulo.problemas.length !== 1 ? 's' : ''}
@@ -85,7 +85,7 @@ export default async function ModulosArquivadosPage() {
                 <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
                   <p className="text-xs text-gray-400 mb-1.5">Alunos:</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {modulo.matrículas.map((m) => (
+                    {modulo.matriculas.map((m) => (
                       <span key={m.id} className="text-xs bg-white border border-gray-200 rounded-full px-2 py-0.5 text-gray-600">
                         {m.usuario.nome}
                       </span>

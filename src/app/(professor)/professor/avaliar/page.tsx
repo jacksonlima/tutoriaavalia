@@ -88,7 +88,7 @@ function AvaliarTutorPageInner() {
           for (const m of modulos) {
             const prob = m.problemas?.find((p: any) => p.id === problemaId)
             if (prob) {
-              const alunosDoModulo: Aluno[] = m.matrículas.map((ma: any) => ma.usuario)
+              const alunosDoModulo: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
 
               // Busca alunos visitantes (encontros especiais apontando para este problema)
               let visitantes: Aluno[] = []
