@@ -46,22 +46,22 @@ export default async function RelatoriosPage({ searchParams }: Props) {
     if (!coTutor) redirect('/professor/dashboard')
   }
 
-  const [avaliaçõesTutor, avaliaçõesAluno] = await Promise.all([
-    prisma.avaliaçãoTutor.findMany({ where: { problema: { moduloId } } }),
-    prisma.avaliaçãoAluno.findMany({ where: { problema: { moduloId } } }),
+  const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
+    prisma.avaliacaoTutor.findMany({ where: { problema: { moduloId } } }),
+    prisma.avaliacaoAluno.findMany({ where: { problema: { moduloId } } }),
   ])
 
   const calcNota = (problemaId: string, alunoId: string, tipo: string) => {
-    const avT = avaliaçõesTutor.find(
+    const avT = avaliacoesTutor.find(
       (a) => a.problemaId === problemaId && a.avaliadoId === alunoId && a.tipoEncontro === tipo
     )
     // Basta a avaliação existir no banco — não exigimos mais finalizado=true
     // (o campo finalizado foi descontinuado: professor pode editar sem travar)
     if (!avT) return null
     const notaTutor = calcMMenosAtTutor(Number(avT.c1), Number(avT.c2), Number(avT.c3), Number(avT.atitudes), avT.ativCompensatoria)
-    const avSelf = avaliaçõesAluno.find((a) => a.problemaId === problemaId && a.avaliadorId === alunoId && a.avaliadoId === alunoId && a.tipoEncontro === tipo)
+    const avSelf = avaliacoesAluno.find((a) => a.problemaId === problemaId && a.avaliadorId === alunoId && a.avaliadoId === alunoId && a.tipoEncontro === tipo)
     const notaSelf = avSelf ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes)) : null
-    const pares = avaliaçõesAluno.filter((a) => a.problemaId === problemaId && a.avaliadoId === alunoId && a.avaliadorId !== alunoId && a.tipoEncontro === tipo)
+    const pares = avaliacoesAluno.filter((a) => a.problemaId === problemaId && a.avaliadoId === alunoId && a.avaliadorId !== alunoId && a.tipoEncontro === tipo)
     const mi = pares.length > 0 ? pares.reduce((acc, a) => acc + calcMMenosAtAluno(Number(a.c1), Number(a.c2), Number(a.c3), Number(a.atitudes)), 0) / pares.length : null
     const nota = calcNotaEncontro({ notaTutor, mediaInterpares: mi, notaAutoAvaliação: notaSelf })
     if (nota === null) return null

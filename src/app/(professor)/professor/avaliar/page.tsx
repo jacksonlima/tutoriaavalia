@@ -66,7 +66,7 @@ function AvaliarTutorPageInner() {
 
   useEffect(() => {
     if (!problemaId) return
-    fetch('/api/avaliações/tutor?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
+    fetch('/api/avaliacoes/tutor?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
       .then((r) => r.json())
       .then(async (data: any[]) => {
         if (data.length > 0) {
@@ -127,11 +127,11 @@ function AvaliarTutorPageInner() {
   const salvar = async () => {
     setSalvando(true)
     try {
-      const res = await fetch('/api/avaliações/tutor', {
+      const res = await fetch('/api/avaliacoes/tutor', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         // finalizar=false: professor pode sempre modificar as notas posteriormente
-        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliações: Object.values(notas) }),
+        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliacoes: Object.values(notas) }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       toast({ title: 'Notas salvas com sucesso' })

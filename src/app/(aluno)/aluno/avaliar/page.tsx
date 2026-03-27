@@ -57,7 +57,7 @@ function AlunoAvaliarPageInner() {
     if (!problemaId || !session) return
 
     // Verifica se já submeteu
-    fetch('/api/avaliações/aluno?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
+    fetch('/api/avaliacoes/aluno?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
       .then((r) => r.json())
       .then(async (avalData: any) => {
 
@@ -103,7 +103,7 @@ function AlunoAvaliarPageInner() {
           // Popula notas já submetidas
           const notasMap: Record<string, NotaAluno> = {}
           for (const a of alunosOrdenados) {
-            const av = (avalData.avaliações ?? []).find((av: any) => av.avaliadoId === a.id)
+            const av = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
             notasMap[a.id] = {
               avaliadoId: a.id,
               c1:       av ? Number(av.c1)       : 0,
@@ -134,10 +134,10 @@ function AlunoAvaliarPageInner() {
   const enviar = async () => {
     setEnviando(true)
     try {
-      const res = await fetch('/api/avaliações/aluno', {
+      const res = await fetch('/api/avaliacoes/aluno', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliações: Object.values(notas) }),
+        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliacoes: Object.values(notas) }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       setFase('concluido')
