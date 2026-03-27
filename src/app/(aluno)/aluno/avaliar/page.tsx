@@ -210,20 +210,36 @@ function AlunoAvaliarPageInner() {
                     )}
                   </div>
                   {n && (
-                    <div className="grid grid-cols-5 gap-2 text-xs text-center text-gray-500">
-                      {(['c1','c2','c3'] as const).map((c, i) => (
-                        <div key={c} className="bg-gray-50 rounded-lg p-2">
-                          <p className="font-medium text-gray-400">C{i+1}</p>
-                          <p className="font-bold text-gray-700">{Number(n[c]).toFixed(1)}</p>
+                    <div className="space-y-1.5 mt-2">
+                      {criterios.map((cr) => (
+                        <div key={cr.campo} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="shrink-0 bg-[#1F4E79] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              {cr.label}
+                            </span>
+                            <p className="text-xs text-gray-500 truncate">{cr.nome}</p>
+                          </div>
+                          <span className="shrink-0 font-bold text-gray-700 text-sm">
+                            {Number(n[cr.campo]).toFixed(1)}
+                          </span>
                         </div>
                       ))}
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <p className="font-medium text-gray-400">At.</p>
-                        <p className="font-bold text-gray-700">{Number(n.atitudes).toFixed(1)}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="shrink-0 bg-gray-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            At.
+                          </span>
+                          <p className="text-xs text-gray-500 truncate">
+                            Pontualidade, responsabilidade, postura e comportamento.
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-bold text-gray-700 text-sm">
+                          {Number(n.atitudes).toFixed(1)}
+                        </span>
                       </div>
-                      <div className="bg-[#1F4E79] bg-opacity-10 rounded-lg p-2">
-                        <p className="font-medium text-[#1F4E79]">M-At</p>
-                        <p className="font-bold text-[#1F4E79]">{media}</p>
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100 mt-1">
+                        <p className="text-xs font-semibold text-[#1F4E79]">Média − Atitudes (M-At)</p>
+                        <span className="font-bold text-[#1F4E79] text-sm">{media}</span>
                       </div>
                     </div>
                   )}
@@ -263,16 +279,32 @@ function AlunoAvaliarPageInner() {
                     )}
                   </div>
                   {n && (
-                    <div className="grid grid-cols-4 gap-2 text-xs text-center">
-                      {(['c1','c2','c3'] as const).map((c, i) => (
-                        <div key={c} className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-gray-400">C{i+1}</p>
-                          <p className="font-bold text-gray-700">{Number(n[c]).toFixed(1)}</p>
+                    <div className="space-y-1.5 mt-2">
+                      {criterios.map((cr) => (
+                        <div key={cr.campo} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="shrink-0 bg-[#1F4E79] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              {cr.label}
+                            </span>
+                            <p className="text-xs text-gray-500 truncate">{cr.nome}</p>
+                          </div>
+                          <span className="shrink-0 font-bold text-gray-700 text-sm">
+                            {Number(n[cr.campo]).toFixed(1)}
+                          </span>
                         </div>
                       ))}
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <p className="text-gray-400">At.</p>
-                        <p className="font-bold text-gray-700">{Number(n.atitudes).toFixed(1)}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="shrink-0 bg-gray-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            At.
+                          </span>
+                          <p className="text-xs text-gray-500 truncate">
+                            Pontualidade, responsabilidade, postura e comportamento.
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-bold text-gray-700 text-sm">
+                          {Number(n.atitudes).toFixed(1)}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -307,24 +339,36 @@ function AlunoAvaliarPageInner() {
           </div>
         )}
 
-        {/* Cabeçalho */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4">
+        {/* Cabeçalho — verde quando auto-avaliação, azul nos demais */}
+        <div className={`rounded-2xl border shadow-sm p-5 mb-4 transition-colors ${
+          ehAutoAval
+            ? 'bg-green-50 border-green-300'
+            : 'bg-white border-gray-200'
+        }`}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+            <span className={`text-xs font-medium uppercase tracking-wide ${
+              ehAutoAval ? 'text-green-600' : 'text-gray-400'
+            }`}>
               {labelTipo}
             </span>
             <span className="text-xs text-gray-400">
               {cardAtual + 1} de {alunos.length}
             </span>
           </div>
-          <h2 className="font-bold text-gray-800">{alunoAtual?.nome}</h2>
-          {ehAutoAval && (
-            <p className="text-xs text-[#1F4E79] mt-0.5 font-medium">Auto-avaliação</p>
-          )}
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-gray-800">{alunoAtual?.nome}</h2>
+            {ehAutoAval && (
+              <span className="text-xs bg-green-500 text-white font-bold px-2 py-0.5 rounded-full">
+                Auto-avaliação
+              </span>
+            )}
+          </div>
           {/* Barra de progresso */}
           <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#1F4E79] rounded-full transition-all"
+              className={`h-full rounded-full transition-all ${
+                ehAutoAval ? 'bg-green-500' : 'bg-[#1F4E79]'
+              }`}
               style={{ width: `${((cardAtual + 1) / alunos.length) * 100}%` }}
             />
           </div>
