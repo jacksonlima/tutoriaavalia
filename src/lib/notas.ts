@@ -73,19 +73,25 @@ export type NotaEncontroInput = {
 }
 
 /**
- * Fórmula única do encontro:
+ * Fórmula do encontro — fiel à planilha Google Sheets:
  *
- *   (interpares×0,5 + auto_aval×0,5 + professor×4) / 5
+ *   Com auto-avaliação:    (interpares×0,5 + auto×0,5 + professor×4) / 5
+ *   Sem auto-avaliação:    (interpares×0,5 + professor×4)             / 4,5
  *
- * REGRA DO ALUNO FALTOSO:
- *   - Se o aluno faltou, ele NÃO submete auto-avaliação → auto = 0
- *   - Os outros alunos NÃO avaliam o faltoso (ou avaliam com 0) → interpares = 0
- *   - O professor lança 0 para o faltoso → notaTutor = 0
- *   - Resultado: (0×0,5 + 0×0,5 + 0×4) / 5 = 0,00
+ * O divisor muda conforme os componentes presentes:
+ *   - auto existe  → peso total = 0,5+0,5+4 = 5   → divide por 5
+ *   - auto ausente → peso total = 0,5+4   = 4,5   → divide por 4,5
+ *
+ * Isso equivale à fórmula da planilha:
+ *   =IF(O="MR","MR",IF(ISERR(autoCell),(inter×0,5+tutor×4)/4,5,
+ *                                      (inter×0,5+auto×0,5+tutor×4)/5))
+ *
+ * ALUNO FALTOSO (não enviou auto-avaliação):
+ *   → notaAutoAvaliacao = null → usa divisor 4,5
+ *   → As notas interpares DELE são ignoradas no cálculo dos colegas (campo faltou=true)
  *
  * Retorna:
- *   null           — SOMENTE quando o professor ainda não lançou nota
- *                    (dados insuficientes, encontro sem registro)
+ *   null           — professor ainda não lançou nota (dados insuficientes)
  *   'SATISFATORIO' — atividade compensatória marcada pelo professor
  *   number         — nota calculada (0,00 a 5,00)
  */
@@ -94,19 +100,23 @@ export function calcNotaEncontro(
 ): number | 'SATISFATORIO' | null {
   const { notaTutor, mediaInterpares, notaAutoAvaliacao } = params
 
-  // Sem nota do professor = encontro sem dados ainda (professor não lançou)
+  // Sem nota do professor = encontro sem dados (professor não lançou)
   if (notaTutor === null) return null
 
   // Atividade compensatória
   if (notaTutor === 'SATISFATORIO') return 'SATISFATORIO'
 
-  // Interpares nulo = nenhum colega avaliou o faltoso → 0
+  // Interpares: se ninguém avaliou → 0 (inclui com peso 0,5 mesmo assim)
   const inter = mediaInterpares ?? 0
 
-  // Auto-avaliação nula = faltoso não avaliou a si mesmo → 0
-  const auto  = notaAutoAvaliacao ?? 0
+  if (notaAutoAvaliacao === null) {
+    // Aluno não enviou auto-avaliação (faltou): remove o peso 0,5 do auto
+    // Divisor = 0,5 (inter) + 4 (tutor) = 4,5
+    return (inter * 0.5 + notaTutor * 4) / 4.5
+  }
 
-  return (inter * 0.5 + auto * 0.5 + notaTutor * 4) / 5
+  // Aluno presente: todos os três componentes, divisor = 5
+  return (inter * 0.5 + notaAutoAvaliacao * 0.5 + notaTutor * 4) / 5
 }
 
 // ─────────────────────────────────────────────────────────────────
