@@ -156,8 +156,18 @@ export async function POST(req: NextRequest) {
 
   await prisma.$transaction(async (tx: any) => {
     for (const av of avaliacoes) {
-      await tx.avaliacaoAluno.create({
-        data: {
+      // upsert: cria se não existe, atualiza se já havia registro parcial anterior
+      await tx.avaliacaoAluno.upsert({
+        where: {
+          problemaId_avaliadorId_avaliadoId_tipoEncontro: {
+            problemaId,
+            avaliadorId: session.user.id,
+            avaliadoId:  av.avaliadoId,
+            tipoEncontro,
+          },
+        },
+        update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
+        create: {
           problemaId,
           avaliadorId: session.user.id,
           avaliadoId:  av.avaliadoId,
