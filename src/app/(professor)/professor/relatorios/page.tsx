@@ -63,7 +63,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
     const notaSelf = avSelf ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes)) : null
     const pares = avaliacoesAluno.filter((a) => a.problemaId === problemaId && a.avaliadoId === alunoId && a.avaliadorId !== alunoId && a.tipoEncontro === tipo)
     const mi = pares.length > 0 ? pares.reduce((acc, a) => acc + calcMMenosAtAluno(Number(a.c1), Number(a.c2), Number(a.c3), Number(a.atitudes)), 0) / pares.length : null
-    const nota = calcNotaEncontro({ notaTutor, mediaInterpares: mi, notaAutoAvaliação: notaSelf })
+    const nota = calcNotaEncontro({ notaTutor, mediaInterpares: mi, notaAutoAvaliacao: notaSelf })
     if (nota === null) return null
     if (nota === 'SATISFATORIO') return 'SATISFATORIO'
     return arredondar(nota as number)
