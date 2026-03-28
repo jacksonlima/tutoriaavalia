@@ -412,8 +412,65 @@ function AlunoAvaliarPageInner() {
           </div>
         </div>
 
+        {/* ── Cards de pré-visualização do resultado ─────────────── */}
+        {(() => {
+          const n      = notaAtual
+          const media  = (n.c1 + n.c2 + n.c3) / 3
+          const mat    = n.atitudes
+          const result = media - mat
+          const fmt    = (v: number) => v.toFixed(2)
+          const fmtAt  = (v: number) => v === 0 ? '0.00' : v.toFixed(2)
+
+          return (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {/* Card 1 — Média em tempo real */}
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-3 text-center">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Média
+                </p>
+                <p className="text-lg font-bold text-gray-800">{fmt(media)}</p>
+                <p className="text-[9px] text-gray-300 mt-0.5">
+                  ({n.c1.toFixed(1)}+{n.c2.toFixed(1)}+{n.c3.toFixed(1)})/3
+                </p>
+              </div>
+
+              {/* Card 2 — Operação Média − Atitudes (sem resolver) */}
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-3 text-center">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  M − At.
+                </p>
+                <p className="text-base font-bold text-gray-700 leading-tight">
+                  {fmt(media)}<span className="text-gray-400 font-normal"> − </span>{fmtAt(mat)}
+                </p>
+                <p className="text-[9px] text-gray-300 mt-0.5">operação</p>
+              </div>
+
+              {/* Card 3 — Resultado M-At */}
+              <div className={`border rounded-2xl shadow-sm p-3 text-center transition-colors ${
+                result >= 4   ? 'bg-green-50 border-green-200'  :
+                result >= 2.5 ? 'bg-blue-50  border-blue-200'   :
+                                'bg-gray-50  border-gray-200'
+              }`}>
+                <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
+                  result >= 4   ? 'text-green-500' :
+                  result >= 2.5 ? 'text-blue-500'  : 'text-gray-400'
+                }`}>
+                  M-At
+                </p>
+                <p className={`text-lg font-bold ${
+                  result >= 4   ? 'text-green-700' :
+                  result >= 2.5 ? 'text-blue-700'  : 'text-gray-700'
+                }`}>
+                  {fmt(result)}
+                </p>
+                <p className="text-[9px] text-gray-300 mt-0.5">resultado</p>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Navegação */}
-        <div className="mt-6 flex gap-3">
+        <div className="mt-4 flex gap-3">
           {cardAtual > 0 && (
             <button type="button" onClick={() => setCardAtual((p) => p - 1)}
               className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium text-sm hover:bg-gray-50">
