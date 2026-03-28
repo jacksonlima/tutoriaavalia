@@ -41,7 +41,15 @@ export async function GET(req: NextRequest) {
 
   // Avaliações do próprio módulo
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
-    prisma.avaliacaoTutor.findMany({ where: { problema: { moduloId } } }),
+    prisma.avaliacaoTutor.findMany({
+      where:  { problema: { moduloId } },
+      select: {
+        id: true, problemaId: true, avaliadoId: true, tutorId: true,
+        tipoEncontro: true, c1: true, c2: true, c3: true,
+        atitudes: true, ativCompensatoria: true, faltou: true,
+        finalizado: true, finalizadoEm: true, criadoEm: true, atualizadoEm: true,
+      },
+    }),
     prisma.avaliacaoAluno.findMany({ where: { problema: { moduloId } } }),
   ])
 
@@ -54,7 +62,15 @@ export async function GET(req: NextRequest) {
   const problemasDestinoIds = [...new Set(encontrosEspeciais.map((e) => e.problemaDestinoId))]
   const [avTutorExt, avAlunoExt] = problemasDestinoIds.length > 0
     ? await Promise.all([
-        prisma.avaliacaoTutor.findMany({ where: { problemaId: { in: problemasDestinoIds } } }),
+        prisma.avaliacaoTutor.findMany({
+          where:  { problemaId: { in: problemasDestinoIds } },
+          select: {
+            id: true, problemaId: true, avaliadoId: true, tutorId: true,
+            tipoEncontro: true, c1: true, c2: true, c3: true,
+            atitudes: true, ativCompensatoria: true, faltou: true,
+            finalizado: true, finalizadoEm: true, criadoEm: true, atualizadoEm: true,
+          },
+        }),
         prisma.avaliacaoAluno.findMany({ where: { problemaId: { in: problemasDestinoIds } } }),
       ])
     : [[], []]
@@ -85,9 +101,18 @@ export async function GET(req: NextRequest) {
       ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes))
       : null
 
+    // Exclui avaliações vindas de alunos marcados como faltosos (campo faltou=true no AvaliacaoTutor)
+    // Um aluno faltoso não participou — suas notas atribuídas aos colegas são ignoradas no interpares
+    const faltososNesteProbTipo = new Set(
+      tutorAvals
+        .filter((t) => t.problemaId === problemaId && t.tipoEncontro === tipo && (t as any).faltou === true)
+        .map((t) => t.avaliadoId)
+    )
+
     const avPares = alunoAvals.filter(
       (a) => a.problemaId === problemaId && a.avaliadoId === alunoId
           && a.avaliadorId !== alunoId && a.tipoEncontro === tipo
+          && !faltososNesteProbTipo.has(a.avaliadorId) // ← ignora notas de faltosos
     )
     const mediaInterpares = avPares.length > 0
       ? avPares.reduce((acc, a) => acc + calcMMenosAtAluno(Number(a.c1), Number(a.c2), Number(a.c3), Number(a.atitudes)), 0) / avPares.length

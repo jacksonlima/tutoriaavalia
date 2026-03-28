@@ -15,6 +15,7 @@ type NotaAluno = {
   c3:                number
   atitudes:          number
   ativCompensatoria: boolean
+  faltou:            boolean
 }
 
 // Dropdown reutilizável para notas
@@ -78,6 +79,7 @@ function AvaliarTutorPageInner() {
               c1: Number(av.c1), c2: Number(av.c2), c3: Number(av.c3),
               atitudes: Number(av.atitudes),
               ativCompensatoria: av.ativCompensatoria,
+              faltou:            av.faltou ?? false,
             }
             alunosArr.push(av.avaliado)
           }
@@ -109,7 +111,7 @@ function AvaliarTutorPageInner() {
               setAlunos(todos)
               const init: Record<string, NotaAluno> = {}
               for (const a of todos) {
-                init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
+                init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false, faltou: false }
               }
               setNotas(init)
               break
@@ -120,7 +122,7 @@ function AvaliarTutorPageInner() {
       })
   }, [problemaId, tipo])
 
-  const setNota = (alunoId: string, campo: CampoNota | 'ativCompensatoria', valor: number | boolean) => {
+  const setNota = (alunoId: string, campo: CampoNota | 'ativCompensatoria' | 'faltou', valor: number | boolean) => {
     setNotas((prev) => ({ ...prev, [alunoId]: { ...prev[alunoId], [campo]: valor } }))
   }
 
@@ -143,7 +145,7 @@ function AvaliarTutorPageInner() {
   }
 
   const calcMedia = (n: NotaAluno) => ((n.c1 + n.c2 + n.c3) / 3)
-  const calcMAt   = (n: NotaAluno) => n.ativCompensatoria ? 'SATISFATÓRIO' : (calcMedia(n) - n.atitudes).toFixed(2)
+  const calcMAt   = (n: NotaAluno) => n.faltou ? '—' : n.ativCompensatoria ? 'SATISFATÓRIO' : (calcMedia(n) - n.atitudes).toFixed(2)
 
   if (carregando) return <div className="p-8 text-center text-gray-400">Carregando...</div>
 
@@ -166,13 +168,25 @@ function AvaliarTutorPageInner() {
             return (
               <div key={aluno.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-gray-800 text-sm">{idx + 1}. {aluno.nome}</span>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                    <input type="checkbox" checked={n.ativCompensatoria}
-                      onChange={(e) => setNota(aluno.id, 'ativCompensatoria', e.target.checked)}
-                       className="w-4 h-4" />
-                    Comp.
-                  </label>
+                  <span className={`font-semibold text-sm ${n.faltou ? 'text-red-400 line-through' : 'text-gray-800'}`}>
+                    {idx + 1}. {aluno.nome}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1 text-xs text-red-500 cursor-pointer font-medium">
+                      <input type="checkbox" checked={n.faltou}
+                        onChange={(e) => setNota(aluno.id, 'faltou', e.target.checked)}
+                        className="w-4 h-4 accent-red-500" />
+                      Faltou
+                    </label>
+                    {!n.faltou && (
+                      <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
+                        <input type="checkbox" checked={n.ativCompensatoria}
+                          onChange={(e) => setNota(aluno.id, 'ativCompensatoria', e.target.checked)}
+                          className="w-4 h-4" />
+                        Comp.
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -185,7 +199,7 @@ function AvaliarTutorPageInner() {
                         valor={n[c.campo] as number}
                         opcoes={c.opcoes}
                         onChange={(v) => setNota(aluno.id, c.campo, v)}
-                        disabled={n.ativCompensatoria}
+                        disabled={n.faltou || n.ativCompensatoria}
                         label={c.nome}
                       />
                     </div>
@@ -198,11 +212,17 @@ function AvaliarTutorPageInner() {
                       valor={n.atitudes}
                       opcoes={OPCOES_ATITUDES}
                       onChange={(v) => setNota(aluno.id, 'atitudes', v)}
-                      disabled={n.ativCompensatoria}
+                      disabled={n.faltou || n.ativCompensatoria}
                       label="Atitudes"
                     />
                   </div>
                 </div>
+
+                {n.faltou && (
+                  <div className="mt-2 text-xs text-red-400 font-medium text-center">
+                    ⚠️ Aluno faltoso — notas interpares deste aluno serão ignoradas no cálculo dos colegas
+                  </div>
+                )}
 
                 <div className="mt-3 text-right text-xs text-gray-500">
                   M = {calcMedia(n).toFixed(2)} · M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
@@ -229,16 +249,19 @@ function AvaliarTutorPageInner() {
                     <div>Atitudes</div>
                     <div className="text-blue-200 text-xs font-normal">(0–1)</div>
                   </th>
+                  <th className="px-3 py-3 font-medium text-center text-red-300">Faltou</th>
                   <th className="px-3 py-3 font-medium text-center">Comp.</th>
                   <th className="px-3 py-3 font-medium text-center">M−At</th>
                 </tr>
               </thead>
               <tbody>
                 {alunos.map((aluno, idx) => {
-                  const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
+                  const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false, faltou: false }
                   return (
-                    <tr key={aluno.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-2 font-medium text-gray-800">{aluno.nome}</td>
+                    <tr key={aluno.id} className={`${n.faltou ? 'bg-red-50 opacity-70' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className={`px-4 py-2 font-medium ${n.faltou ? 'text-red-400 line-through' : 'text-gray-800'}`}>
+                        {aluno.nome}
+                      </td>
 
                       {criterios.map((c) => (
                         <td key={c.campo} className="px-2 py-2">
@@ -246,7 +269,7 @@ function AvaliarTutorPageInner() {
                             valor={n[c.campo] as number}
                             opcoes={c.opcoes}
                             onChange={(v) => setNota(aluno.id, c.campo, v)}
-                            disabled={n.ativCompensatoria}
+                            disabled={n.faltou || n.ativCompensatoria}
                             label={c.nome}
                           />
                         </td>
@@ -257,15 +280,22 @@ function AvaliarTutorPageInner() {
                           valor={n.atitudes}
                           opcoes={OPCOES_ATITUDES}
                           onChange={(v) => setNota(aluno.id, 'atitudes', v)}
-                          disabled={n.ativCompensatoria}
+                          disabled={n.faltou || n.ativCompensatoria}
                           label="Atitudes"
                         />
                       </td>
 
                       <td className="px-3 py-2 text-center">
+                        <input type="checkbox" checked={n.faltou}
+                          onChange={(e) => setNota(aluno.id, 'faltou', e.target.checked)}
+                          className="w-4 h-4 cursor-pointer accent-red-500" />
+                      </td>
+
+                      <td className="px-3 py-2 text-center">
                         <input type="checkbox" checked={n.ativCompensatoria}
                           onChange={(e) => setNota(aluno.id, 'ativCompensatoria', e.target.checked)}
-                           className="w-4 h-4 cursor-pointer" />
+                          disabled={n.faltou}
+                          className="w-4 h-4 cursor-pointer disabled:opacity-30" />
                       </td>
 
                       <td className="px-3 py-2 text-center font-semibold text-[#1F4E79]">

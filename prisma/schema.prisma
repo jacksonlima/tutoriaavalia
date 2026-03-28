@@ -204,6 +204,7 @@ model AvaliacaoTutor {
   c3                Decimal  @db.Decimal(3, 1)
   atitudes          Decimal  @db.Decimal(3, 1)
   ativCompensatoria Boolean  @default(false) @map("ativ_compensatoria")
+  faltou            Boolean  @default(false) @map("faltou")
 
   finalizado        Boolean   @default(false)
   finalizadoEm      DateTime? @map("finalizado_em")

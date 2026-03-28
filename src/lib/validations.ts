@@ -114,6 +114,7 @@ const avaliacaoIndividualTutorSchema = z.object({
   c3:                notaSchema,      // critério 3 (0-5)
   atitudes:          atitudesSchema,  // atitudes (0-1) — ÚNICA definição
   ativCompensatoria: z.boolean().default(false),
+  faltou:            z.boolean().default(false),
 })
 
 export const avaliacaoTutorSchema = z.object({

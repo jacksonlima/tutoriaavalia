@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
           c3:                av.c3,
           atitudes:          av.atitudes,
           ativCompensatoria: av.ativCompensatoria,
+          faltou:            av.faltou ?? false,
           // finalizado NÃO é atualizado aqui — não há mais travamento do tutor
         },
         create: {
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
           c3:                av.c3,
           atitudes:          av.atitudes,
           ativCompensatoria: av.ativCompensatoria,
+          faltou:            av.faltou ?? false,
           finalizado:        false, // sempre false — professor pode sempre editar
         },
       })
