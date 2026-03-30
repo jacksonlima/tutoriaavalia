@@ -20,17 +20,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // NextAuth v5 (auth.js) usa cookie 'authjs.session-token'
-  // Em produção HTTPS usa '__Secure-authjs.session-token'
-  const isSecure = req.url.startsWith('https://')
-  const cookieName = isSecure
-    ? '__Secure-authjs.session-token'
-    : 'authjs.session-token'
-
+  // Cookie definido em src/lib/auth.ts como 'authjs.session-token' (sem prefix __Secure-).
+  // Mesmo nome em HTTP (localhost/IP) e HTTPS (ngrok/produção).
   const token = await getToken({
     req,
     secret:     process.env.NEXTAUTH_SECRET,
-    cookieName: cookieName,
+    cookieName: 'authjs.session-token',
   })
 
   const isLoggedIn = !!token

@@ -16,6 +16,28 @@ const getAllowedDomains = () =>
     .filter(Boolean)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // ── Configuração de cookies para acesso via IP local (iPhone/Android em testes)
+  // Em produção (HTTPS) o NextAuth usa cookies seguros automaticamente.
+  // Em desenvolvimento acessado via IP na rede local (não localhost), o Safari iOS
+  // rejeita cookies com secure=true em HTTP — então relaxamos as flags apenas em dev.
+  // trustHost permite que NextAuth aceite qualquer host (localhost, IP, ngrok, etc.)
+  trustHost: true,
+
+  cookies: {
+    // Usa o mesmo nome de cookie em HTTP e HTTPS, sem prefix __Secure-.
+    // Necessário para que o middleware (getToken) encontre o cookie
+    // tanto em localhost quanto via ngrok (HTTPS) ou IP local (HTTP).
+    sessionToken: {
+      name: 'authjs.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path:     '/',
+        secure:   false,  // false = funciona em HTTP (local) e HTTPS (ngrok/prod)
+      },
+    },
+  },
+
   providers: [
     Google({
       clientId:     process.env.GOOGLE_CLIENT_ID!,

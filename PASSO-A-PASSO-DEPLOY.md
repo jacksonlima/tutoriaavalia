@@ -1,163 +1,171 @@
-# TutoriaAvalia v2 — Passo a Passo: Teste Local, GitHub e Vercel
+# TutoriaAvalia v2 — Passo a Passo Completo
 
 **Autor:** Jackson Lima — CESUPA  
-**Atualizado:** 2026
+**Atualizado:** Março 2026
 
 ---
 
-## PARTE 1 — TESTAR LOCALMENTE (novo computador)
-
-### Pré-requisitos
-- **Node.js 18+** → https://nodejs.org (versão LTS)
-- **Git** → https://git-scm.com
-
-### Passos
+## PARTE 1 — TESTE LOCAL (mesmo computador)
 
 ```bash
-# 1. Extrair o ZIP e entrar na pasta
 cd tutoriaavalia
-
-# 2. Instalar dependências
 npm install
-
-# 3. Configurar variáveis de ambiente
-cp .env.example .env.local
-# Edite .env.local com suas credenciais reais:
-#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-#   NEXTAUTH_SECRET  →  openssl rand -base64 32
-#   DATABASE_URL e DIRECT_DATABASE_URL (painel Neon)
-#   NEXTAUTH_URL=http://localhost:3000
-
-# 4. Gerar o Prisma Client
 npx prisma generate
-
-# 5. ⚠️ IMPORTANTE: criar a tabela de notificações no banco
 npx prisma db push
-
-# 6. Popular banco com dados de teste (opcional)
-npm run db:seed
-
-# 7. Iniciar o servidor
+npm run db:seed:ataque    # turma Ataque e Defesa (8 alunos, 5 problemas)
 npm run dev
 ```
 
-Acesse: http://localhost:3000  
-Login de desenvolvimento (sem Google): http://localhost:3000/dev/login
+Acesse: http://localhost:3000/dev/login
 
 ---
 
-## PARTE 2 — ATUALIZAR O GITHUB
+## PARTE 2 — TESTE NO iPHONE via ngrok
 
-### Se já tem o repo e quer atualizar com estes arquivos
-
+### Instalar ngrok (uma vez)
 ```bash
-# Copie os arquivos do ZIP por cima do seu repo local
-cp -r ~/Downloads/tutoriaavalia/. ~/projetos/tutoriaavalia/
+brew install ngrok
+ngrok config add-authtoken SEU_TOKEN   # em ngrok.com → conta gratuita
+```
 
+### Rodar
+```bash
+# Terminal 1
+npm run dev
+
+# Terminal 2
+ngrok http 3000
+```
+
+No iPhone acesse: `https://xxx.ngrok-free.app/dev/login`
+
+---
+
+## PARTE 3 — GIT: ATUALIZAR O REPOSITÓRIO
+
+### Se é o primeiro push deste projeto
+```bash
+cd tutoriaavalia
+git init
+git remote add origin https://github.com/SEU_USUARIO/tutoriaavalia.git
+git add .
+git commit -m "feat: TutoriaAvalia v2 — versão completa"
+git branch -M main
+git push -u origin main
+```
+
+### Se o repositório já existe (atualizar com novos arquivos)
+```bash
 cd ~/projetos/tutoriaavalia
 
-# Ver o que mudou
-git status
+# Copiar arquivos do ZIP
+cp -r ~/Downloads/tutoriaavalia/. .
 
-# Adicionar tudo
+# Limpar cache do Next.js (importante após mudar next.config.js ou middleware)
+rm -rf .next
+
 git add .
+git status   # conferir o que vai ser commitado
 
-# Commit
-git commit -m "feat: sistema de notificações e contadores de submissão
+git commit -m "feat/fix: notificações, faltou, correção de cálculos e acesso mobile
 
-NOVIDADES:
-- Tabela 'notificacoes' no banco (migration 20260326_notificacoes)
-- POST /api/avaliacoes/aluno: cria notificações ao receber submissão
-- GET/PATCH /api/notificacoes: lista e marca como lidas
-- GET /api/submissoes/contador: progresso X/Total por problema+tipo
-- NotificationBell: sino no TopBar com polling 30s e badge de não lidas
-- useContadorSubmissoes: hook com polling 60s para contadores
-- ModuloCard: badges X/Total ao lado de Abertura/Fechamento/Salto Triplo
-- Regras: tutor titular + co-tutores com permissão + encontros especiais
+FUNCIONALIDADES:
+- Sistema de notificações: sino no TopBar + polling 30s
+- Contadores X/Total de submissões por encontro no ModuloCard
+- Checkbox Faltou no painel do tutor (exclui interpares do faltoso)
+- Cards de preview Média / M-At operação / M-At resultado (formulário aluno)
+- Visual verde na auto-avaliação do aluno
+- Descrição dos critérios (1.1, 1.2...) na revisão e tela de concluído
+- Seeds: Introdução ao Estudo da Medicina e Ataque e Defesa
 
-CORREÇÕES ANTERIORES:
-- matriculas sem acento em 9 arquivos (PrismaClientValidationError)
-- next.config.js: experimental.serverComponentsExternalPackages (Next.js 14.x)
-- next@14.2.18 → 14.2.35 (patch de segurança)
-- README: ano 2025 → 2026"
+CORREÇÕES DE CÁLCULO:
+- calcNotaEncontro: divisor 4.5 (não 5) quando auto-avaliação ausente
+- notaAutoAvaliação → notaAutoAvaliacao (acento causava NaN no relatório)
+- avaliacaoAluno.create → upsert (evita erro P2002 em reenvio)
 
-# Enviar
+CORREÇÕES DE ACESSO MOBILE (ngrok/IP local):
+- next.config.js: allowedDevOrigins para domínios ngrok
+- auth.ts: trustHost:true + cookie 'authjs.session-token' sem secure:false
+- middleware.ts: cookieName alinhado com auth.ts
+- api/dev/login: redirect usa x-forwarded-host do ngrok
+
+CORREÇÕES DE BUILD/RUNTIME:
+- next 14.2.18 → 14.2.35 (patch de segurança)
+- serverExternalPackages → experimental.serverComponentsExternalPackages (Next.js 14)
+- matrículas → matriculas em 9 arquivos (PrismaClientValidationError)
+- /api/avaliações → /api/avaliacoes nas URLs de fetch
+- migration 20260326: tabela notificacoes
+- migration 20260328: campo faltou em avaliacoes_tutor"
+
 git push origin main
 ```
 
 ---
 
-## PARTE 3 — DEPLOY NA VERCEL
+## PARTE 4 — DEPLOY NA VERCEL
 
-### ⚠️ PASSO OBRIGATÓRIO: criar a tabela de notificações
+### Após o git push a Vercel faz deploy automático.
+Acompanhe em: https://vercel.com/dashboard → seu projeto → Deployments
 
-A Vercel faz deploy automaticamente após o push, mas o banco precisa
-da nova tabela `notificacoes`. Rode isso UMA VEZ na sua máquina
-apontando para o banco de produção:
+### Variáveis obrigatórias na Vercel
+Settings → Environment Variables:
 
-```bash
-# Edite temporariamente .env.local com a DATABASE_URL do Neon de PRODUÇÃO
-# (a URL sem -pooler, i.e. DIRECT_DATABASE_URL)
-# Depois rode:
-npx prisma db push
+| Variável | Valor |
+|---|---|
+| GOOGLE_CLIENT_ID | Do Google Cloud Console |
+| GOOGLE_CLIENT_SECRET | Do Google Cloud Console |
+| NEXTAUTH_SECRET | `openssl rand -base64 32` |
+| NEXTAUTH_URL | `https://tutoriaavalia.vercel.app` |
+| DATABASE_URL | URL pooled do Neon (com -pooler) |
+| DIRECT_DATABASE_URL | URL direta do Neon (sem -pooler) |
+| ALLOWED_EMAIL_DOMAIN | `prof.cesupa.br,aluno.cesupa.br` |
 
-# OU execute o SQL direto no painel do Neon → Console:
-```
+### SQL obrigatório no Neon (rodar uma vez após primeiro deploy)
+Console.neon.tech → SQL Editor:
 
 ```sql
+-- Tabela de notificações
 CREATE TABLE IF NOT EXISTS "notificacoes" (
-    "id"            TEXT NOT NULL,
-    "tutor_id"      TEXT NOT NULL,
-    "titulo"        TEXT NOT NULL,
-    "mensagem"      TEXT NOT NULL,
-    "problema_id"   TEXT,
+    "id" TEXT NOT NULL,
+    "tutor_id" TEXT NOT NULL,
+    "titulo" TEXT NOT NULL,
+    "mensagem" TEXT NOT NULL,
+    "problema_id" TEXT,
     "tipo_encontro" TEXT,
-    "lida"          BOOLEAN NOT NULL DEFAULT false,
-    "criada_em"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lida" BOOLEAN NOT NULL DEFAULT false,
+    "criada_em" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "notificacoes_pkey" PRIMARY KEY ("id")
 );
-
 ALTER TABLE "notificacoes"
     ADD CONSTRAINT "notificacoes_tutor_id_fkey"
     FOREIGN KEY ("tutor_id") REFERENCES "usuarios"("id") ON DELETE CASCADE;
-
 CREATE INDEX IF NOT EXISTS "notificacoes_tutor_id_lida_idx"
     ON "notificacoes"("tutor_id", "lida");
+
+-- Campo faltou nas avaliações do tutor
+ALTER TABLE "avaliacoes_tutor"
+    ADD COLUMN IF NOT EXISTS "faltou" BOOLEAN NOT NULL DEFAULT false;
 ```
 
-### Variáveis de ambiente na Vercel
-
-Acesse: **Vercel Dashboard → seu projeto → Settings → Environment Variables**
-
-| Variável              | Valor                                    |
-|-----------------------|------------------------------------------|
-| GOOGLE_CLIENT_ID      | Do Google Cloud Console                  |
-| GOOGLE_CLIENT_SECRET  | Do Google Cloud Console                  |
-| NEXTAUTH_SECRET       | `openssl rand -base64 32`               |
-| NEXTAUTH_URL          | `https://tutoriaavalia.vercel.app`       |
-| DATABASE_URL          | URL pooled do Neon (com `-pooler`)       |
-| DIRECT_DATABASE_URL   | URL direta do Neon (sem `-pooler`)       |
-| ALLOWED_EMAIL_DOMAIN  | `prof.cesupa.br,aluno.cesupa.br`         |
+Ou via terminal local:
+```bash
+npx prisma db push
+```
 
 ---
 
-## PARTE 4 — GOOGLE OAUTH (se a URL mudou)
-
-1. https://console.cloud.google.com → APIs → Credenciais
-2. Origens autorizadas: `https://tutoriaavalia.vercel.app`
-3. URIs de redirecionamento: `https://tutoriaavalia.vercel.app/api/auth/callback/google`
-
----
-
-## Comandos úteis
+## COMANDOS ÚTEIS
 
 ```bash
-npm run dev           # Servidor local
-npm run build         # Testa o build antes do deploy
-npm run db:seed       # Recriar dados de teste
-npm run db:studio     # Interface visual do banco
-npx prisma generate   # Regenerar Prisma Client
-npx prisma db push    # Sincronizar schema → banco
+npm run dev                # servidor local
+npm run build              # testa build antes do deploy
+npm run db:seed            # seed completo (8 tutorias, 2025)
+npm run db:seed:intro      # seed Introdução ao Estudo da Medicina
+npm run db:seed:ataque     # seed Ataque e Defesa (turma teste)
+npm run db:studio          # interface visual do banco
+npx prisma generate        # regenerar Prisma Client
+npx prisma db push         # sincronizar schema → banco
+rm -rf .next               # limpar cache Next.js (usar após mudar config)
 ```
 
 ---

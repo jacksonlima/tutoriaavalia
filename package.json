@@ -12,7 +12,8 @@
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
-    "db:seed:intro": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-intro-medicina.ts"
+    "db:seed:intro": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-intro-medicina.ts",
+    "db:seed:ataque": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-ataque-defesa.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
