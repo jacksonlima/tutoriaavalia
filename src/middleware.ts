@@ -1,8 +1,3 @@
-/**
- * TutoriaAvalia v2
- * Autor: Jackson Lima — CESUPA
- * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
@@ -10,29 +5,26 @@ export async function middleware(req: NextRequest) {
   const { nextUrl } = req
   const { pathname } = nextUrl
 
-  // ── Rotas públicas — nunca bloqueadas ───────────────────────────
   if (
-    pathname.startsWith('/api/')     ||
-    pathname.startsWith('/dev')      ||
-    pathname.startsWith('/_next')    ||
-    pathname === '/favicon.ico'
+    pathname.startsWith('/api/')        ||
+    pathname.startsWith('/dev')         ||
+    pathname.startsWith('/_next')       ||
+    pathname === '/favicon.ico'         ||
+    pathname === '/mobile-signin'
   ) {
     return NextResponse.next()
   }
 
-  // Cookie definido em src/lib/auth.ts como 'authjs.session-token' (sem prefix __Secure-).
-  // Mesmo nome em HTTP (localhost/IP) e HTTPS (ngrok/produção).
   const token = await getToken({
     req,
     secret:     process.env.NEXTAUTH_SECRET,
     cookieName: 'authjs.session-token',
   })
 
-  const isLoggedIn = !!token
-  const papel      = token?.papel as string | undefined
+  const isLoggedIn  = !!token
+  const papel       = token?.papel as string | undefined
   const isLoginPage = pathname === '/login'
 
-  // ── Não logado → vai para o login ─────────────────────────────
   if (!isLoggedIn) {
     if (isLoginPage) return NextResponse.next()
     const url = new URL('/login', nextUrl.origin)
@@ -40,25 +32,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // ── Logado na página de login → redireciona pro dashboard ──────
   if (isLoginPage) {
     if (papel === 'TUTOR') return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
     if (papel === 'ALUNO') return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
     return NextResponse.next()
   }
 
-  // ── Sem papel → deixa passar (banco ainda carregando) ──────────
-  if (!papel) {
-    return NextResponse.next()
-  }
+  if (!papel) return NextResponse.next()
 
-  // ── Proteção por papel ─────────────────────────────────────────
-  if (pathname.startsWith('/aluno') && papel === 'TUTOR') {
+  if (pathname.startsWith('/aluno')     && papel === 'TUTOR')
     return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
-  }
-  if (pathname.startsWith('/professor') && papel === 'ALUNO') {
+  if (pathname.startsWith('/professor') && papel === 'ALUNO')
     return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
-  }
 
   return NextResponse.next()
 }
