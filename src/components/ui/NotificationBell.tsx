@@ -3,13 +3,17 @@
  * Autor: Jackson Lima — CESUPA
  *
  * NotificationBell — sino de notificações para tutores.
- * Faz polling a cada 30 segundos para buscar novas notificações.
- * Exibe badge com contagem de não lidas e dropdown com lista.
+ * Otimizado com SWR: faz polling a cada 30s, mas pausa
+ * automaticamente se a aba do navegador perder o foco (economia na Vercel).
  */
 
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import useSWR from 'swr'
+
+// Esta linha ensina o SWR a ler os dados da sua API
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 type Notificacao = {
   id:           string
@@ -19,8 +23,6 @@ type Notificacao = {
   lida:         boolean
   criadaEm:     string
 }
-
-const POLLING_INTERVAL_MS = 30_000 // 30 segundos
 
 function formatarTempo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -33,11 +35,25 @@ function formatarTempo(iso: string): string {
 }
 
 export function NotificationBell() {
-  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([])
-  const [totalNaoLidas, setTotalNaoLidas] = useState(0)
-  const [aberto, setAberto]               = useState(false)
-  const [carregando, setCarregando]       = useState(false)
+  const [aberto, setAberto]         = useState(false)
+  const [carregando, setCarregando] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 1. A MÁGICA DO SWR AQUI:
+  // Substitui os antigos useState e setInterval.
+  const { data, mutate } = useSWR<{ notificacoes: Notificacao[], totalNaoLidas: number }>(
+    '/api/notificacoes',
+    fetcher,
+    {
+      refreshInterval: 30000,  // Continua checando a cada 30s
+      revalidateOnFocus: true, // Atualiza na hora se o professor voltar para a aba
+      refreshWhenHidden: false // ESSENCIAL: Pausa tudo se a aba for minimizada
+    }
+  )
+
+  // Extrai os dados do SWR com segurança (fallback para vazio caso esteja carregando)
+  const notificacoes = data?.notificacoes ?? []
+  const totalNaoLidas = data?.totalNaoLidas ?? 0
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {
@@ -50,44 +66,39 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickFora)
   }, [])
 
-  const buscarNotificacoes = useCallback(async () => {
-    try {
-      const res  = await fetch('/api/notificacoes', { cache: 'no-store' })
-      if (!res.ok) return
-      const data = await res.json()
-      setNotificacoes(data.notificacoes ?? [])
-      setTotalNaoLidas(data.totalNaoLidas ?? 0)
-    } catch {
-      // silencioso — polling falhou, tenta novamente no próximo intervalo
-    }
-  }, [])
-
-  // Busca inicial + polling a cada 30s
-  useEffect(() => {
-    buscarNotificacoes()
-    const timer = setInterval(buscarNotificacoes, POLLING_INTERVAL_MS)
-    return () => clearInterval(timer)
-  }, [buscarNotificacoes])
-
-  const abrirDropdown = async () => {
+  const abrirDropdown = () => {
     setAberto((v) => !v)
   }
 
   const marcarTodasLidas = async () => {
     setCarregando(true)
     try {
+      // Atualização otimista: muda na tela antes de ir pro banco para parecer instantâneo
+      mutate({
+        notificacoes: notificacoes.map((n) => ({ ...n, lida: true })),
+        totalNaoLidas: 0
+      }, false)
+
       await fetch('/api/notificacoes', { method: 'PATCH', cache: 'no-store' })
-      setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })))
-      setTotalNaoLidas(0)
+      
+      // Sincroniza com o servidor
+      mutate()
     } finally {
       setCarregando(false)
     }
   }
 
   const marcarUmaLida = async (id: string) => {
+    // Atualização otimista na tela
+    mutate({
+      notificacoes: notificacoes.map((n) => n.id === id ? { ...n, lida: true } : n),
+      totalNaoLidas: Math.max(0, totalNaoLidas - 1)
+    }, false)
+
     await fetch(`/api/notificacoes?id=${id}`, { method: 'PATCH', cache: 'no-store' })
-    setNotificacoes((prev) => prev.map((n) => n.id === id ? { ...n, lida: true } : n))
-    setTotalNaoLidas((v) => Math.max(0, v - 1))
+    
+    // Sincroniza com o servidor
+    mutate()
   }
 
   return (
@@ -170,9 +181,9 @@ export function NotificationBell() {
 
           {/* Rodapé */}
           {notificacoes.length > 0 && (
-            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-center">
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-center flex flex-col gap-1">
               <p className="text-[10px] text-gray-400">
-                Atualiza automaticamente a cada 30s
+                Atualiza a cada 30s (pausa se aba inativa)
               </p>
             </div>
           )}
