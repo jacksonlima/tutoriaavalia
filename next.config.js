@@ -27,9 +27,12 @@ const nextConfig = {
   // Prisma Client roda no Node.js runtime — não pode ser bundlado pelo Next.js
   // NOTA: No Next.js 14.x a chave correta é experimental.serverComponentsExternalPackages
   // (em Next.js 15+ passou a ser serverExternalPackages no nível raiz)
+  /** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', /* outros... */],
   },
+  // outras configurações...
 }
 
 module.exports = nextConfig
