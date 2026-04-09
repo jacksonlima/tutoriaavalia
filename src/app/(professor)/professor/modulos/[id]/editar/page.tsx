@@ -7,6 +7,9 @@ import { TopBar } from '@/components/ui/TopBar'
 import { OPCOES_TUTORIA, OPCOES_TURMA } from '@/lib/validations'
 import { EmailAutocomplete } from '@/components/ui/EmailAutocomplete'
 
+// IMPORTAÇÃO DA SERVER ACTION (Segurança Máxima)
+import { editarModuloAction } from './actions'
+
 type Problema  = { id: string; numero: number; nome: string | null; temSaltoTriplo: boolean }
 type Matricula = { id: string; usuario: { id: string; nome: string; email: string }; numeraNaTurma: number }
 type Modulo = {
@@ -38,7 +41,7 @@ export default function EditarModuloPage() {
   const [erro,       setErro]       = useState<string | null>(null)
   const [sucesso,    setSucesso]    = useState(false)
 
-  // ── Carrega dados do módulo ────────────────────────────────────
+  // ── Carrega dados do módulo (Mantido via API GET para não quebrar os estados) ──
   useEffect(() => {
     if (!moduloId) return
     fetch(`/api/modulos/${moduloId}`)
@@ -78,7 +81,7 @@ export default function EditarModuloPage() {
     setEmailsAlunos(arr)
   }
 
-  // ── Salvar ────────────────────────────────────────────────────
+  // ── Salvar (AGORA UTILIZANDO A SERVER ACTION) ─────────────────
   const salvar = async () => {
     if (!nome || nome.length < 3) { setErro('Nome do módulo muito curto'); return }
     if (!tutoria)                  { setErro('Selecione a tutoria'); return }
@@ -89,15 +92,24 @@ export default function EditarModuloPage() {
     setErro(null)
 
     try {
-      const res = await fetch(`/api/modulos/${moduloId}`, {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ nome, ano, tutoria, turma, emailsAlunos, nomesProblemas }),
+      // Chama a nossa ação blindada diretamente no servidor
+      const resposta = await editarModuloAction(moduloId, {
+        nome,
+        ano,
+        tutoria,
+        turma,
+        emailsAlunos,
+        nomesProblemas
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`)
+
+      // Se a trava de segurança barrou ou os dados vieram incorretos:
+      if (!resposta.sucesso) {
+        throw new Error(resposta.erro || 'Erro ao atualizar o módulo.')
+      }
+
       setSucesso(true)
       setTimeout(() => router.push('/professor/dashboard'), 1200)
+      
     } catch (e: any) {
       setErro(e.message)
     } finally {

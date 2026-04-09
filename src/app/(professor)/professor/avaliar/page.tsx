@@ -7,6 +7,9 @@ import { TopBar } from '@/components/ui/TopBar'
 import { useToast } from '@/components/ui/use-toast'
 import { getCriterios, getLabelTipo, OPCOES_ATITUDES, TipoEncontroForm, Criterio, CampoNota } from '@/lib/criterios'
 
+// IMPORTAÇÃO DA SERVER ACTION (A Mágica do Next.js 14)
+import { salvarAvaliacoesTutor } from './actions'
+
 type Aluno    = { id: string; nome: string }
 type NotaAluno = {
   avaliadoId:        string
@@ -65,6 +68,7 @@ function AvaliarTutorPageInner() {
   const criterios = getCriterios(tipo)
   const labelTipo = getLabelTipo(tipo)
 
+  // O fetch de LEITURA (GET) foi mantido pois consome outras APIs
   useEffect(() => {
     if (!problemaId) return
     fetch('/api/avaliacoes/tutor?problemaId=' + problemaId + '&tipoEncontro=' + tipo)
@@ -92,7 +96,6 @@ function AvaliarTutorPageInner() {
             if (prob) {
               const alunosDoModulo: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
 
-              // Busca alunos visitantes (encontros especiais apontando para este problema)
               let visitantes: Aluno[] = []
               try {
                 const eeRes  = await fetch(`/api/encontros-especiais/visitantes?problemaId=${problemaId}&tipoEncontro=${tipo}`)
@@ -100,7 +103,6 @@ function AvaliarTutorPageInner() {
                 if (Array.isArray(eeData)) visitantes = eeData
               } catch {}
 
-              // Combina alunos do módulo + visitantes (sem duplicatas)
               const todosIds = new Set(alunosDoModulo.map((a: Aluno) => a.id))
               const visitantesNovos = visitantes.filter((v: Aluno) => !todosIds.has(v.id))
               const todos: Aluno[] = [
@@ -126,19 +128,27 @@ function AvaliarTutorPageInner() {
     setNotas((prev) => ({ ...prev, [alunoId]: { ...prev[alunoId], [campo]: valor } }))
   }
 
+  // ----------------------------------------------------------------------
+  // FUNÇÃO REFEITA: Usando Server Action ao invés de fetch('/api/...', POST)
+  // ----------------------------------------------------------------------
   const salvar = async () => {
     setSalvando(true)
     try {
-      const res = await fetch('/api/avaliacoes/tutor', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // finalizar=false: professor pode sempre modificar as notas posteriormente
-        body:    JSON.stringify({ problemaId, tipoEncontro: tipo, avaliacoes: Object.values(notas) }),
+      // Chama a função direto do servidor! Sem conversão JSON.stringify manual.
+      const resposta = await salvarAvaliacoesTutor({
+        problemaId,
+        tipoEncontro: tipo,
+        avaliacoes: Object.values(notas)
       })
-      if (!res.ok) throw new Error((await res.json()).error)
-      toast({ title: 'Notas salvas com sucesso' })
+
+      // A action retorna um objeto { sucesso, erro, quantidadeSalva }
+      if (!resposta.sucesso) {
+        throw new Error(resposta.erro || 'Erro desconhecido ao salvar as notas.')
+      }
+
+      toast({ title: `Rascunho salvo! ${resposta.quantidadeSalva} alunos avaliados.` })
     } catch (e: any) {
-      toast({ title: 'Erro', description: e.message, variant: 'destructive' })
+      toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' })
     } finally {
       setSalvando(false)
     }
@@ -250,89 +260,4 @@ function AvaliarTutorPageInner() {
                     <div className="text-blue-200 text-xs font-normal">(0–1)</div>
                   </th>
                   <th className="px-3 py-3 font-medium text-center text-red-300">Faltou</th>
-                  <th className="px-3 py-3 font-medium text-center">Comp.</th>
-                  <th className="px-3 py-3 font-medium text-center">M−At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alunos.map((aluno, idx) => {
-                  const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false, faltou: false }
-                  return (
-                    <tr key={aluno.id} className={`${n.faltou ? 'bg-red-50 opacity-70' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                      <td className={`px-4 py-2 font-medium ${n.faltou ? 'text-red-400 line-through' : 'text-gray-800'}`}>
-                        {aluno.nome}
-                      </td>
-
-                      {criterios.map((c) => (
-                        <td key={c.campo} className="px-2 py-2">
-                          <DropdownNota
-                            valor={n[c.campo] as number}
-                            opcoes={c.opcoes}
-                            onChange={(v) => setNota(aluno.id, c.campo, v)}
-                            disabled={n.faltou || n.ativCompensatoria}
-                            label={c.nome}
-                          />
-                        </td>
-                      ))}
-
-                      <td className="px-2 py-2">
-                        <DropdownNota
-                          valor={n.atitudes}
-                          opcoes={OPCOES_ATITUDES}
-                          onChange={(v) => setNota(aluno.id, 'atitudes', v)}
-                          disabled={n.faltou || n.ativCompensatoria}
-                          label="Atitudes"
-                        />
-                      </td>
-
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={n.faltou}
-                          onChange={(e) => setNota(aluno.id, 'faltou', e.target.checked)}
-                          className="w-4 h-4 cursor-pointer accent-red-500" />
-                      </td>
-
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox" checked={n.ativCompensatoria}
-                          onChange={(e) => setNota(aluno.id, 'ativCompensatoria', e.target.checked)}
-                          disabled={n.faltou}
-                          className="w-4 h-4 cursor-pointer disabled:opacity-30" />
-                      </td>
-
-                      <td className="px-3 py-2 text-center font-semibold text-[#1F4E79]">
-                        {calcMAt(n)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <button onClick={() => salvar()} disabled={salvando}
-            className="w-full bg-[#1F4E79] text-white px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
-            {salvando
-              ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Salvando...</>
-              : 'Salvar Notas'}
-          </button>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-export default function AvaliarTutorPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Carregando...</p>
-        </div>
-      </div>
-    }>
-      <AvaliarTutorPageInner />
-    </Suspense>
-  )
-}
+                  <th className

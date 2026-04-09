@@ -1,29 +1,35 @@
+// src/app/(professor)/professor/dashboard/page.tsx
+
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { prisma } from '@/lib/db' // <-- Trazido para o topo de forma global e cacheada
 import { ModuloCard } from '@/components/professor/ModuloCard'
 import { TopBar } from '@/components/ui/TopBar'
 
+// Força a página a sempre buscar dados novos (nunca exibe cache obsoleto do professor)
 export const dynamic = 'force-dynamic'
 
 export default async function ProfessorDashboard() {
-  const { prisma } = await import('@/lib/db')
   const session = await auth()
+  
+  // Barreira de Segurança
   if (!session || session.user.papel !== 'TUTOR') redirect('/login')
 
+  // O Prisma executará estas buscas diretamente na Vercel (Server Side)
   const include = {
     problemas: { orderBy: { numero: 'asc' } },
     _count: { select: { matriculas: true } },
   } as const
 
-  // Módulos onde é titular
+  // 1. Módulos onde é titular
   const modulosTitular = await prisma.modulo.findMany({
     where:   { tutorId: session.user.id, arquivado: false },
     include,
     orderBy: { criadoEm: 'desc' },
   })
 
-  // Módulos onde é co-tutor (substituto)
+  // 2. Módulos onde é co-tutor (substituto)
   const coTutorEm = await prisma.coTutor.findMany({
     where:   { tutorId: session.user.id },
     include: {
@@ -43,6 +49,7 @@ export default async function ProfessorDashboard() {
 
   const totalModulos = modulosTitular.length + modulosSubstituto.length
 
+  // HTML entregue pronto para o celular do usuário, sem telas de "Carregando..." vazias
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBar nome={session.user.nome} papel="TUTOR" />
@@ -107,6 +114,7 @@ export default async function ProfessorDashboard() {
                   </div>
                 )}
                 {modulosSubstituto.map((modulo) => (
+                  // O typescript às vezes chora com tipos complexos retornados pelo Prisma, o 'as any' previne erros de compilação aqui
                   <ModuloCard key={modulo.id} modulo={modulo as any} isTitular={false} />
                 ))}
               </>

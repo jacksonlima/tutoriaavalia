@@ -14,6 +14,9 @@ import { TopBar } from '@/components/ui/TopBar'
 import { EmailAutocomplete } from '@/components/ui/EmailAutocomplete'
 import { useSession } from 'next-auth/react'
 
+// IMPORTANDO A SERVER ACTION
+import { criarModuloAction } from './actions'
+
 export default function NovoModuloPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -52,20 +55,31 @@ export default function NovoModuloPage() {
     setValue('problemasSaltoTriplo', novoArr)
   }
 
+  // ----------------------------------------------------------------------
+  // FUNÇÃO REFEITA: Usando a Server Action
+  // ----------------------------------------------------------------------
   const onSubmit = async (data: CriarModuloInput) => {
-    if (emailsAlunos.length === 0) { setErro('Adicione pelo menos 1 aluno'); return }
+    if (emailsAlunos.length === 0) { 
+      setErro('Adicione pelo menos 1 aluno')
+      return 
+    }
+    
     setSalvando(true)
     setErro(null)
+    
     try {
-      const res  = await fetch('/api/modulos', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(data),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Erro ' + res.status)
+      // Chama a ação no servidor e aguarda a resposta
+      const resposta = await criarModuloAction(data)
+
+      // Verifica se houve falha na validação ou autorização do servidor
+      if (!resposta.sucesso) {
+        throw new Error(resposta.erro || 'Não foi possível criar o módulo.')
+      }
+
+      // Tudo deu certo
       setSucesso(true)
       setTimeout(() => router.push('/professor/dashboard'), 1200)
+      
     } catch (e: any) {
       setErro(e.message)
       setSalvando(false)

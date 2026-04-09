@@ -2,10 +2,15 @@
  * TutoriaAvalia v2
  * Autor: Jackson Lima — CESUPA
  * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ * * ARQUIVO DE VALIDAÇÕES (ZOD)
+ * Estas regras garantem que nenhum dado malicioso ou mal formatado
+ * chegue ao banco de dados Neon, blindando as Server Actions.
  */
 import { z } from 'zod'
 
-// Nota para criterios (0-5), aceita valores do dropdown incluindo 4.5
+// ── Tipos Base ────────────────────────────────────────────────────
+
+// Nota para critérios (0-5), aceita valores do dropdown incluindo 4.5
 const notaSchema = z
   .number({ required_error: 'Campo obrigatório', invalid_type_error: 'Deve ser um número' })
   .min(0, 'Mínimo: 0')
@@ -17,17 +22,16 @@ const atitudesSchema = z
   .min(0, 'Mínimo: 0')
   .max(1, 'Máximo: 1')
 
-// Opções fixas de tutoria
+// ── Opções Fixas (Enums) ──────────────────────────────────────────
+
 export const OPCOES_TUTORIA = [
   'Tutoria 1', 'Tutoria 2', 'Tutoria 3', 'Tutoria 4',
   'Tutoria 5', 'Tutoria 6', 'Tutoria 7', 'Tutoria 8',
   'Tutoria Extra 1', 'Tutoria Extra 2', 'Tutoria Extra 3',
 ] as const
 
-// Opções fixas de turma
 export const OPCOES_TURMA = ['MD1','MD2','MD3','MD4','MD5','MD6','MD7','MD8'] as const
 
-// Opções de semestre
 export const OPCOES_SEMESTRE = ['01', '02'] as const
 
 // Nomes dos módulos — lista oficial CESUPA
@@ -58,7 +62,8 @@ export const OPCOES_MODULO = [
   'XXIV - Apresentações Clínicas 6: Ginecologia e Obstetrícia',
 ] as const
 
-// ── Módulo ────────────────────────────────────────────────────────
+// ── Schemas de Módulo ─────────────────────────────────────────────
+
 export const criarModuloSchema = z.object({
   nome:      z.enum(OPCOES_MODULO, { required_error: 'Selecione o módulo' }),
   ano:       z.number().int().min(2020).max(2100),
@@ -81,10 +86,11 @@ export const criarModuloSchema = z.object({
   problemasSaltoTriplo: z.array(z.number().int().min(1)).optional(),
 })
 
-
+// Exporta a tipagem perfeita para o TypeScript usar nas Server Actions
 export type CriarModuloInput = z.infer<typeof criarModuloSchema>
 
-// ── Editar Módulo (todos os campos opcionais exceto os de identidade) ─────────
+// ── Editar Módulo ─────────────────────────────────────────────────
+// Todos os campos opcionais exceto os de identidade
 export const editarModuloSchema = z.object({
   nome:     z.enum(OPCOES_MODULO, { required_error: 'Selecione o módulo' }),
   ano:      z.number().int().min(2020).max(2100),
@@ -98,7 +104,6 @@ export const editarModuloSchema = z.object({
     .min(1, 'Adicione pelo menos 1 aluno')
     .max(11, 'Máximo de 11 alunos'),
 
-  // Nomes dos problemas (um por problema existente)
   nomesProblemas: z.array(z.string().max(120)),
 })
 
@@ -109,10 +114,10 @@ const TIPOS_ENCONTRO = ['ABERTURA', 'FECHAMENTO', 'FECHAMENTO_A', 'FECHAMENTO_B'
 
 const avaliacaoIndividualTutorSchema = z.object({
   avaliadoId:        z.string().uuid(),
-  c1:                notaSchema,      // critério 1 (0-5)
-  c2:                notaSchema,      // critério 2 (0-5)
-  c3:                notaSchema,      // critério 3 (0-5)
-  atitudes:          atitudesSchema,  // atitudes (0-1) — ÚNICA definição
+  c1:                notaSchema,      
+  c2:                notaSchema,      
+  c3:                notaSchema,      
+  atitudes:          atitudesSchema,  
   ativCompensatoria: z.boolean().default(false),
   faltou:            z.boolean().default(false),
 })
@@ -120,9 +125,7 @@ const avaliacaoIndividualTutorSchema = z.object({
 export const avaliacaoTutorSchema = z.object({
   problemaId:   z.string().uuid(),
   tipoEncontro: z.enum(TIPOS_ENCONTRO),
-  // 'finalizar' removido — professor pode sempre editar notas.
-  // O controle de acesso do aluno é feito apenas pelo campo de ativação
-  // do encontro (aberturaAtiva, fechamentoAtivo etc.) no Problema.
+  // Valida que o envio possui pelo menos 1 aluno e no máximo 11 (tamanho do grupo PBL)
   avaliacoes:   z.array(avaliacaoIndividualTutorSchema).min(1).max(11),
 })
 
