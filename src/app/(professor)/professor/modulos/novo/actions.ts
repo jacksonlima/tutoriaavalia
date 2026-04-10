@@ -9,21 +9,17 @@ import { revalidatePath } from 'next/cache'
 export async function criarModuloAction(dadosBrutos: any) {
   const session = await auth()
   
-  // 1. AUTENTICAÇÃO: O usuário está logado?
   if (!session) {
     return { sucesso: false, erro: 'Você precisa fazer login.' }
   }
 
-  // 2. AUTORIZAÇÃO (O Passo 5!): É um Tutor? (Alunos espertinhos param aqui)
   if (session.user.papel !== 'TUTOR') {
     return { sucesso: false, erro: 'Acesso Negado: Apenas professores podem criar módulos.' }
   }
 
-  // 3. VALIDAÇÃO ZOD: Garante que os dados estão no formato perfeito
   const validacao = criarModuloSchema.safeParse(dadosBrutos)
   
   if (!validacao.success) {
-    // Se o Zod achar erros, devolvemos para o Frontend mostrar em vermelho
     return { 
       sucesso: false, 
       erro: 'Preencha os campos corretamente.',
@@ -31,11 +27,9 @@ export async function criarModuloAction(dadosBrutos: any) {
     }
   }
 
-  // Se passou de tudo, temos certeza que os dados estão limpos e perfeitos!
   const dados = validacao.data
 
   try {
-    // 4. Salva no banco de dados Neon
     const novoModulo = await prisma.modulo.create({
       data: {
         nome: dados.nome,
@@ -43,16 +37,16 @@ export async function criarModuloAction(dadosBrutos: any) {
         semestre: dados.semestre,
         tutoria: dados.tutoria,
         turma: dados.turma,
-        tutorId: session.user.id, // O dono do módulo!
+        tutorId: session.user.id, 
         
-        // Cria as matrículas dos alunos
+        // CORREÇÃO AQUI: Agora enviamos o e-mail E o número da chamada!
         matriculas: {
-          create: dados.emailsAlunos.map(email => ({
-            usuario: { connect: { email } }
+          create: dados.emailsAlunos.map((email, index) => ({
+            usuario: { connect: { email } },
+            numeraNaTurma: index + 1 
           }))
         },
         
-        // Cria os problemas
         problemas: {
           create: dados.nomesProblemas.map((nome, index) => ({
             numero: index + 1,
@@ -62,7 +56,6 @@ export async function criarModuloAction(dadosBrutos: any) {
       }
     })
 
-    // 5. Atualiza o painel do professor para o módulo novo aparecer instantaneamente
     revalidatePath('/professor/dashboard')
 
     return { sucesso: true, moduloId: novoModulo.id }
