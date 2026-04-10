@@ -63,6 +63,7 @@ model Modulo {
   id            String   @id @default(uuid())
   nome          String
   ano           Int
+  semestre      String   @default("01")  // ex: "1º Semestre", "2º Semestre"
   tutoria       String   // ex: "Tutoria 1", "Tutoria Extra 2"
   turma         String   // ex: "MD1", "MD2"
   tutorId       String   @map("tutor_id")
