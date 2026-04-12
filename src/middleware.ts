@@ -1,0 +1,71 @@
+/**
+ * TutoriaAvalia v2
+ * Autor: Jackson Lima — CESUPA
+ * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
+ *
+ * middleware.ts — Proteção de rotas por autenticação e papel.
+ * ATENÇÃO: O arquivo DEVE se chamar middleware.ts (não proxy.ts ou outro nome).
+ * O Next.js só reconhece este nome específico.
+ */
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+
+export async function middleware(req: NextRequest) {
+  const { nextUrl } = req
+  const { pathname } = nextUrl
+
+  // ── Rotas públicas — nunca bloqueadas ───────────────────────────
+  if (
+    pathname.startsWith('/api/')     ||
+    pathname.startsWith('/dev')      ||
+    pathname.startsWith('/mobile')   ||   // rotas mobile (signin, callback)
+    pathname.startsWith('/_next')    ||
+    pathname === '/favicon.ico'
+  ) {
+    return NextResponse.next()
+  }
+
+  // Cookie definido em src/lib/auth.ts como 'authjs.session-token' (sem prefix __Secure-).
+  // Mesmo nome em HTTP (localhost/IP) e HTTPS (ngrok/produção).
+  const token = await getToken({
+    req,
+    secret:     process.env.NEXTAUTH_SECRET,
+    cookieName: 'authjs.session-token',
+  })
+
+  const isLoggedIn   = !!token
+  const papel        = token?.papel as string | undefined
+  const isLoginPage  = pathname === '/login'
+
+  // ── Não logado → vai para o login ──────────────────────────────
+  if (!isLoggedIn) {
+    if (isLoginPage) return NextResponse.next()
+    const url = new URL('/login', nextUrl.origin)
+    url.searchParams.set('callbackUrl', pathname)
+    return NextResponse.redirect(url)
+  }
+
+  // ── Logado na página de login → redireciona ao dashboard ───────
+  if (isLoginPage) {
+    if (papel === 'TUTOR') return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
+    if (papel === 'ALUNO') return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
+    return NextResponse.next()
+  }
+
+  // ── Sem papel ainda (banco carregando) → deixa passar ──────────
+  if (!papel) return NextResponse.next()
+
+  // ── Proteção por papel ─────────────────────────────────────────
+  if (pathname.startsWith('/aluno') && papel === 'TUTOR') {
+    return NextResponse.redirect(new URL('/professor/dashboard', nextUrl.origin))
+  }
+  if (pathname.startsWith('/professor') && papel === 'ALUNO') {
+    return NextResponse.redirect(new URL('/aluno/dashboard', nextUrl.origin))
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)'],
+}

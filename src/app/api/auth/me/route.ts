@@ -1,38 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
+/**
+ * TutoriaAvalia v2 — GET /api/auth/me
+ * Autor: Jackson Lima — CESUPA
+ *
+ * Retorna os dados do usuário logado.
+ * Útil para verificar a sessão atual via fetch no cliente.
+ */
+import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const { prisma } = await import('@/lib/db')
-
-  // Tenta via cookie (web normal)
   const session = await auth()
-  if (session?.user?.email) {
-    const usuario = await prisma.usuario.findUnique({
-      where:  { email: session.user.email },
-      select: { id: true, nome: true, email: true, papel: true, avatarUrl: true },
-    })
-    if (usuario) return NextResponse.json(usuario)
+
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
-  // Tenta via Bearer token (app mobile)
-  const authHeader = req.headers.get('authorization') ?? ''
-  const bearerToken = authHeader.startsWith('Bearer ')
-    ? authHeader.slice(7).trim()
-    : null
+  const usuario = await prisma.usuario.findUnique({
+    where:  { email: session.user.email },
+    select: { id: true, nome: true, email: true, papel: true, avatarUrl: true },
+  })
 
-  if (bearerToken) {
-    // Busca a sessão pelo token diretamente no banco
-    const dbSession = await prisma.session.findUnique({
-      where:   { sessionToken: bearerToken },
-      include: { user: { select: { id: true, nome: true, email: true, papel: true, avatarUrl: true } } },
-    })
-
-    if (dbSession && dbSession.expires > new Date()) {
-      return NextResponse.json(dbSession.user)
-    }
+  if (!usuario) {
+    return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   }
 
-  return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  return NextResponse.json(usuario)
 }

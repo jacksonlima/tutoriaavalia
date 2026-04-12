@@ -16,6 +16,7 @@ type Modulo = {
   id:            string
   nome:          string
   ano:           number
+  semestre:      string
   tutoria:       string
   turma:         string
   problemas:     Problema[]
@@ -32,6 +33,7 @@ export default function EditarModuloPage() {
   const [ano,            setAno]            = useState(new Date().getFullYear())
   const [tutoria,        setTutoria]        = useState('')
   const [turma,          setTurma]          = useState('')
+  const [semestre,       setSemestre]       = useState('01')
   const [emailsAlunos,   setEmailsAlunos]   = useState<string[]>([])
   const [nomesProblemas, setNomesProblemas] = useState<string[]>([])
   const [emailDigitado,  setEmailDigitado]  = useState('')
@@ -53,6 +55,7 @@ export default function EditarModuloPage() {
         setTutoria(data.tutoria)
         setTurma(data.turma)
         setEmailsAlunos(data.matriculas.map((m) => m.usuario.email))
+        setSemestre(data.semestre ?? '01')
         setNomesProblemas(data.problemas.map((p) => p.nome ?? ''))
         setCarregando(false)
       })
@@ -96,6 +99,7 @@ export default function EditarModuloPage() {
       const resposta = await editarModuloAction(moduloId, {
         nome,
         ano,
+        semestre,
         tutoria,
         turma,
         emailsAlunos,
