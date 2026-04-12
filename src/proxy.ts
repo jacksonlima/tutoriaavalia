@@ -3,39 +3,37 @@
  * Autor: Jackson Lima — CESUPA
  * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
  *
- * middleware.ts — Proteção de rotas por autenticação e papel.
- * ATENÇÃO: O arquivo DEVE se chamar middleware.ts (não proxy.ts ou outro nome).
- * O Next.js só reconhece este nome específico.
+ * proxy.ts — Proteção de rotas no Next.js 16.
+ * ATENÇÃO: No Next.js 16 o arquivo DEVE se chamar proxy.ts e exportar 'proxy'.
+ *          O antigo middleware.ts foi descontinuado nesta versão.
+ *
+ * Segurança implementada:
+ *   1. Rotas públicas liberadas (api, dev, mobile, _next, favicon)
+ *   2. Não logado → redireciona para /login
+ *   3. Logado na página de login → redireciona para o dashboard correto
+ *   4. Proteção por papel: ALUNO não acessa /professor e vice-versa
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 
-export async function middleware(req: NextRequest) {
+export const proxy = auth((req) => {
   const { nextUrl } = req
   const { pathname } = nextUrl
 
   // ── Rotas públicas — nunca bloqueadas ───────────────────────────
   if (
-    pathname.startsWith('/api/')     ||
-    pathname.startsWith('/dev')      ||
-    pathname.startsWith('/mobile')   ||   // rotas mobile (signin, callback)
-    pathname.startsWith('/_next')    ||
+    pathname.startsWith('/api/')   ||
+    pathname.startsWith('/dev')    ||
+    pathname.startsWith('/mobile') ||
+    pathname.startsWith('/_next')  ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next()
   }
 
-  // Cookie definido em src/lib/auth.ts como 'authjs.session-token' (sem prefix __Secure-).
-  // Mesmo nome em HTTP (localhost/IP) e HTTPS (ngrok/produção).
-  const token = await getToken({
-    req,
-    secret:     process.env.NEXTAUTH_SECRET,
-    cookieName: 'authjs.session-token',
-  })
-
-  const isLoggedIn   = !!token
-  const papel        = token?.papel as string | undefined
-  const isLoginPage  = pathname === '/login'
+  const isLoggedIn  = !!req.auth
+  const papel       = req.auth?.user?.papel as string | undefined
+  const isLoginPage = pathname === '/login'
 
   // ── Não logado → vai para o login ──────────────────────────────
   if (!isLoggedIn) {
@@ -64,7 +62,7 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next()
-}
+})
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)'],

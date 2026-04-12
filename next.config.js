@@ -14,8 +14,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Permite acesso cross-origin aos assets /_next/* em modo desenvolvimento.
-  // Necessário para testes via ngrok, IP local (celular na mesma rede Wi-Fi), etc.
+  // Permite acesso cross-origin aos assets /_next/* em desenvolvimento
+  // Necessário para testes via ngrok, IP local (celular na mesma rede)
   allowedDevOrigins: [
     '*.ngrok-free.app',
     '*.ngrok-free.dev',
@@ -24,10 +24,8 @@ const nextConfig = {
   ],
 
   // Prisma Client roda no Node.js runtime — não pode ser bundlado pelo Next.js
-  // No Next.js 14.x a chave correta é experimental.serverComponentsExternalPackages
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
-  },
+  // Next.js 15+ e 16: chave no nível raiz (não mais em experimental)
+  serverExternalPackages: ['@prisma/client', 'prisma'],
 }
 
 module.exports = nextConfig
