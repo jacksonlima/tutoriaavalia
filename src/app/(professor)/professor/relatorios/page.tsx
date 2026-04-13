@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { TopBar } from '@/components/ui/TopBar'
@@ -106,9 +107,18 @@ export default async function RelatoriosPage({ searchParams }: Props) {
     <div className="min-h-screen bg-gray-50">
       <TopBar nome={session.user.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
       <main className="max-w-5xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-[#1F4E79]">Resumo MT — {modulo.nome}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{modulo.tutoria} - Turma {modulo.turma} - {modulo.ano}</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-[#1F4E79]">Resumo MT — {modulo.nome}</h1>
+            <p className="text-sm text-gray-500 mt-0.5">{modulo.tutoria} - Turma {modulo.turma} - {modulo.ano}</p>
+          </div>
+          <Link
+            href={`/professor/relatorios/exportar?moduloId=${moduloId}`}
+            target="_blank"
+            className="flex items-center gap-2 bg-[#1F4E79] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d61] transition-colors whitespace-nowrap"
+          >
+            🖨️ Exportar / Imprimir
+          </Link>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
