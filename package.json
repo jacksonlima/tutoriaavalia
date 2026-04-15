@@ -19,7 +19,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.config.integration.ts",
-    "test:all": "npm run test:run && npm run test:integration"
+    "test:e2e": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' e2e/run.ts",
+    "test:all": "npm run test:run && npm run test:integration && npm run test:e2e"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -38,6 +39,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^22.9.3",
     "@types/pg": "^8.20.0",
     "@types/react": "^18.3.12",
