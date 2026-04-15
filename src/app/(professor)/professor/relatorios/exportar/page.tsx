@@ -242,7 +242,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
         <a href={`/professor/relatorios?moduloId=${moduloId}`} className="back-btn">
           ← Voltar
         </a>
-        <button className="print-btn" onClick="window.print()">
+        <button className="print-btn" onClick={() => window.print()}>
           🖨️ Imprimir / Salvar PDF
         </button>
       </div>
@@ -286,16 +286,16 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
               <tr>
                 {modulo.problemas.map((p) =>
                   p.temSaltoTriplo ? (
-                    <>
-                      <th key={`${p.id}-ab`}>Ab</th>
-                      <th key={`${p.id}-fa`}>FeA</th>
-                      <th key={`${p.id}-fb`}>FeB</th>
-                    </>
+                    <React.Fragment key={p.id}>
+                      <th>Ab</th>
+                      <th>FeA</th>
+                      <th>FeB</th>
+                    </React.Fragment>
                   ) : (
-                    <>
-                      <th key={`${p.id}-ab`}>Ab</th>
-                      <th key={`${p.id}-fe`}>Fe</th>
-                    </>
+                    <React.Fragment key={p.id}>
+                      <th>Ab</th>
+                      <th>Fe</th>
+                    </React.Fragment>
                   )
                 )}
               </tr>
@@ -307,8 +307,8 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                   {modulo.problemas.map((p) => {
                     const np = notas[p.numero]
                     if (!np) return p.temSaltoTriplo
-                      ? <><td key={`${p.id}-ab`} className="nota-vazia">—</td><td key={`${p.id}-fa`} className="nota-vazia">—</td><td key={`${p.id}-fb`} className="nota-vazia">—</td></>
-                      : <><td key={`${p.id}-ab`} className="nota-vazia">—</td><td key={`${p.id}-fe`} className="nota-vazia">—</td></>
+                      ? <React.Fragment key={p.id}><td className="nota-vazia">—</td><td className="nota-vazia">—</td><td className="nota-vazia">—</td></React.Fragment>
+                      : <React.Fragment key={p.id}><td className="nota-vazia">—</td><td className="nota-vazia">—</td></React.Fragment>
 
                     const fmtV = (v: any) => {
                       if (v === null || v === undefined) return <span className="nota-vazia">—</span>
@@ -318,16 +318,16 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                     }
 
                     return p.temSaltoTriplo ? (
-                      <>
-                        <td key={`${p.id}-ab`}>{fmtV(np.ab)}</td>
-                        <td key={`${p.id}-fa`}>{fmtV(np.fa)}</td>
-                        <td key={`${p.id}-fb`}>{fmtV(np.fb)}</td>
-                      </>
+                      <React.Fragment key={p.id}>
+                        <td>{fmtV(np.ab)}</td>
+                        <td>{fmtV(np.fa)}</td>
+                        <td>{fmtV(np.fb)}</td>
+                      </React.Fragment>
                     ) : (
-                      <>
-                        <td key={`${p.id}-ab`}>{fmtV(np.ab)}</td>
-                        <td key={`${p.id}-fe`}>{fmtV(np.fe)}</td>
-                      </>
+                      <React.Fragment key={p.id}>
+                        <td>{fmtV(np.ab)}</td>
+                        <td>{fmtV(np.fe)}</td>
+                      </React.Fragment>
                     )
                   })}
                   <td>{n(mediaAb)}</td>
@@ -530,12 +530,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
 
       </div>
 
-      {/* Script do botão de impressão */}
-      <script dangerouslySetInnerHTML={{ __html: `
-        document.querySelector('.print-btn').addEventListener('click', function() {
-          window.print();
-        });
-      `}} />
+
     </>
   )
 }
