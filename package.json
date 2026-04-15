@@ -17,7 +17,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
+    "test:all": "npm run test:run && npm run test:integration"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -37,10 +39,13 @@
   },
   "devDependencies": {
     "@types/node": "^22.9.3",
+    "@types/pg": "^8.20.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitest/ui": "^4.1.4",
     "autoprefixer": "^10.4.20",
+    "embedded-postgres": "^18.3.0-beta.16",
+    "pg": "^8.20.0",
     "postcss": "^8.4.49",
     "prisma": "^6.0.0",
     "tailwindcss": "^3.4.15",
