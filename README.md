@@ -42,6 +42,31 @@ Login de desenvolvimento: `http://localhost:3000/dev/login`
 
 ---
 
+## 🧪 Testes
+
+Duas suítes:
+
+```bash
+# Unitários — fórmulas de nota e schemas Zod (rápido, sem banco)
+npm run test:run
+
+# Integração — Server Actions + Prisma com Postgres embutido
+npm run test:integration
+
+# As duas suítes
+npm run test:all
+
+# Modo watch (dev)
+npm test
+```
+
+A suíte de integração sobe um Postgres embutido (`embedded-postgres`) na primeira
+execução — sem Docker, sem instalar nada, ~5s de inicialização. Após o boot, cada
+teste é isolado por `truncateAll()` em `beforeEach`. Detalhes em
+[`src/test/`](src/test/).
+
+---
+
 ## 🏗 Stack tecnológica
 
 | Camada | Tecnologia |

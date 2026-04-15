@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  unit:
     name: Vitest (unit)
     runs-on: ubuntu-latest
 
@@ -26,3 +26,23 @@ jobs:
 
       - name: Rodar testes unitários
         run: npm run test:run
+
+  integration:
+    name: Vitest (integração + Postgres)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar testes de integração
+        run: npm run test:integration
