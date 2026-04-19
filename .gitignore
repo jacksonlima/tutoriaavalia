@@ -26,8 +26,13 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+<<<<<<< HEAD
 
 # Playwright (E2E)
 /test-results/
 /playwright-report/
 /playwright/.cache/
+=======
+.claude/
+>>>>>>> d0689a9 (fix: remove .claude do repositório e adiciona ao .gitignore)
+.claude/
