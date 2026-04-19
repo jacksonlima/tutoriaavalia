@@ -34,12 +34,12 @@ export async function POST(req: NextRequest) {
     console.log(`[LGPD][DIREITOS] ${protocolo} | tipo=${tipo} | nome=${nome} | email=${email} | ${new Date().toISOString()}`)
     console.log(`[LGPD][DIREITOS] Descrição: ${descricao.slice(0, 200)}`)
 
-    // Em produção, aqui enviaria e-mail para privacidade@cesupa.br
+    // Em produção, aqui enviaria e-mail para jackson.lima@prof.cesupa.br
     // usando Resend, SendGrid, ou Nodemailer configurado com SMTP institucional
     // Exemplo com Resend:
     // await resend.emails.send({
     //   from: 'noreply@tutoriaavalia.vercel.app',
-    //   to: 'privacidade@cesupa.br',
+    //   to: 'jackson.lima@prof.cesupa.br',
     //   subject: `[LGPD] ${tipo} — ${protocolo}`,
     //   text: `Nome: ${nome}\nEmail: ${email}\nTipo: ${tipo}\nDescrição: ${descricao}`,
     // })

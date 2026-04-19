@@ -18,10 +18,10 @@ export const metadata = {
 }
 
 const ULTIMA_ATUALIZACAO = '18 de abril de 2026'
-const EMAIL_DPO          = 'privacidade@cesupa.br'
-const NOME_DPO           = 'Jackson Lima'
+const EMAIL_DPO          = 'jackson.lima@prof.cesupa.br'
+const NOME_DPO           = 'Professor Jackson Cordeiro Lima'
 const INSTITUICAO        = 'CESUPA — Centro Universitário do Estado do Pará'
-const ENDERECO           = 'Av. Alcindo Cacela, 287 — Umarizal, Belém-PA, CEP 66060-902'
+const ENDERECO           = 'Campus João Paulo do Valle Mendes — Av. Alm. Barroso, nº 3775 - Souza, Belém - PA, 66613-903, Brasil'
 
 export default function PoliticaPrivacidade() {
   return (
@@ -64,14 +64,14 @@ export default function PoliticaPrivacidade() {
           <section>
             <h2 className="text-xl font-bold text-[#1F4E79] mb-3">1. Quem somos</h2>
             <p className="leading-relaxed">
-              O <strong>TutoriaAvalia</strong> é um sistema de avaliação formativa para o método
+              O <strong>TutoriaAvalia</strong> é um sistema de atribuição de notas da avaliação formativa para o método
               de Aprendizagem Baseada em Problemas (ABP), desenvolvido por{' '}
-              <strong>{NOME_DPO}</strong> para uso acadêmico no{' '}
+              <strong>{NOME_DPO}</strong> para uso acadêmico no Curso de Medicina{' '}
               <strong>{INSTITUICAO}</strong>.
             </p>
             <p className="leading-relaxed mt-3">
-              O controlador dos dados pessoais é o <strong>{INSTITUICAO}</strong>,{' '}
-              situado na {ENDERECO}.
+              O controlador dos dados pessoais é o <strong>Curso de Medicina do {INSTITUICAO}</strong>,{' '}
+              situado no {ENDERECO}.
             </p>
           </section>
 

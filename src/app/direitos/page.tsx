@@ -12,7 +12,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-const EMAIL_DPO = 'privacidade@cesupa.br'
+const EMAIL_DPO = 'jackson.lima@prof.cesupa.br'
 
 type Tipo = 'acesso' | 'correcao' | 'exclusao' | 'portabilidade' | 'oposicao' | 'outro'
 
