@@ -65,8 +65,8 @@ export default function PoliticaPrivacidade() {
             <h2 className="text-xl font-bold text-[#1F4E79] mb-3">1. Quem somos</h2>
             <p className="leading-relaxed">
               O <strong>TutoriaAvalia</strong> é um sistema de atribuição de notas da avaliação formativa para o método
-              de Aprendizagem Baseada em Problemas (ABP), desenvolvido por{' '}
-              <strong>{NOME_DPO}</strong> para uso acadêmico no Curso de Medicina{' '}
+              de Aprendizagem Baseada em Problemas (ABP), desenvolvido pelos Professores{' '}
+              <strong>Jackson Cordeiro Lima e Bruno Vinícius da Silva Pinheiro</strong> para uso acadêmico no Curso de Medicina{' '}
               <strong>{INSTITUICAO}</strong>.
             </p>
             <p className="leading-relaxed mt-3">
