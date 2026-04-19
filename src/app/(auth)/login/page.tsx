@@ -86,9 +86,23 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 mt-6">
-          Use apenas o email institucional da sua organização.
-        </p>
+        <div className="mt-6 space-y-3">
+          <p className="text-xs text-gray-500 text-center">
+            Use apenas o e-mail institucional da sua organização.
+          </p>
+          <p className="text-xs text-gray-400 text-center leading-relaxed">
+            Ao entrar, você concorda com nossa{' '}
+            <a
+              href="/privacidade"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1F4E79] underline hover:text-[#2E75B6]"
+            >
+              Política de Privacidade
+            </a>{' '}
+            e o tratamento dos seus dados conforme a LGPD.
+          </p>
+        </div>
       </div>
     </main>
   )

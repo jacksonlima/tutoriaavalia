@@ -55,6 +55,15 @@ export function TopBar({ nome, papel, backHref, backLabel = 'Voltar' }: TopBarPr
         {/* Sino de notificações — apenas para tutores */}
         {papel === 'TUTOR' && <NotificationBell />}
 
+        <a
+          href="/privacidade"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded transition-colors hidden sm:block"
+          title="Política de Privacidade"
+        >
+          Privacidade
+        </a>
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded transition-colors"

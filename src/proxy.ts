@@ -22,11 +22,14 @@ export const proxy = auth((req) => {
 
   // ── Rotas públicas — nunca bloqueadas ───────────────────────────
   if (
-    pathname.startsWith('/api/')   ||
-    pathname.startsWith('/dev')    ||
-    pathname.startsWith('/mobile') ||
-    pathname.startsWith('/_next')  ||
-    pathname === '/favicon.ico'
+    pathname.startsWith('/api/')       ||
+    pathname.startsWith('/dev')          ||
+    pathname.startsWith('/mobile')       ||
+    pathname.startsWith('/_next')        ||
+    pathname === '/favicon.ico'          ||
+    pathname === '/privacidade'          ||   // Política de Privacidade — pública
+    pathname === '/direitos'             ||   // Canal de direitos LGPD — público
+    pathname === '/conta/excluir'            // Exclusão de conta — auth verificada internamente
   ) {
     return NextResponse.next()
   }
