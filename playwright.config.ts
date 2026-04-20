@@ -1,32 +1,21 @@
 /**
- * Playwright config para a suíte E2E.
+ * TutoriaAvalia v2 — Configuração Playwright (Testes E2E)
+ * Autor: Jackson Lima — CESUPA
  *
- * A infra (Postgres embutido + env vars + schema) é provisionada pelo
- * wrapper `e2e/run.ts` ANTES do Playwright iniciar — por isso este arquivo
- * só precisa se preocupar com:
- *   - onde estão os specs
- *   - como subir o webServer (Next dev herda DATABASE_URL do wrapper)
- *   - qual globalSetup rodar (só seed, infra já está pronta)
- *
- * Rodamos apenas no Chromium para a suíte ficar rápida (~30s).
+ * Roda: npm run test:e2e
+ * Abre um browser Chromium real e navega pelo sistema.
  */
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 3100
-const BASE_URL = `http://localhost:${PORT}`
-
 export default defineConfig({
-  testDir: './e2e/tests',
-  globalSetup: './e2e/global-setup.ts',
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  testDir: './e2e',
   fullyParallel: false,
-  workers: 1,
-  retries: 0,
-  reporter: [['list']],
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  reporter: 'html',
   use: {
-    baseURL: BASE_URL,
-    trace: 'retain-on-failure',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
@@ -36,12 +25,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx next dev -p ${PORT}`,
-    url: BASE_URL,
-    reuseExistingServer: false,
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    // env herdado automaticamente do process.env (setado pelo e2e/run.ts)
   },
 })

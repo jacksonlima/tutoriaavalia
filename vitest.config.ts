@@ -1,18 +1,21 @@
+/**
+ * TutoriaAvalia v2 — Configuração Vitest (Testes Unitários)
+ * Autor: Jackson Lima — CESUPA
+ *
+ * Roda: npm run test:run
+ * Testa funções puras isoladas — sem banco, sem HTTP, sem browser.
+ */
 import { defineConfig } from 'vitest/config'
-import path from 'node:path'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    // Testes de integração rodam separadamente via vitest.config.integration.ts
-    exclude: ['**/node_modules/**', '**/*.integration.{test,spec}.{ts,tsx}'],
-    globals: false,
-    coverage: {
-      provider: 'v8',
-      include: ['src/lib/**/*.ts'],
-      reporter: ['text', 'html'],
-    },
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    exclude: ['src/**/*.integration.test.ts', 'e2e/**'],
+    reporters: ['verbose'],
   },
   resolve: {
     alias: {
