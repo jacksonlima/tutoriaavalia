@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (!problema || problema.modulo.tutorId !== session.user.id)
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
 
-  const encontros = await prisma.encontroEspecial.findMany({
+  const encontros = await prisma.situacaoExcepcional.findMany({
     where: { problemaDestinoId: problemaId, tipoEncontro: tipoEncontro as any },
     include: {
       aluno: { select: { id: true, nome: true, email: true } },

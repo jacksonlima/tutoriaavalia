@@ -46,7 +46,7 @@ export default async function AlunoDashboard() {
 
   // Encontros especiais atribuídos a este aluno no módulo de origem
   // Chave de bloqueio: (alunoId, moduloOrigemId, tipoEncontro)
-  const encontrosEspeciais = await prisma.encontroEspecial.findMany({
+  const situacoesExcepcionais = await prisma.situacaoExcepcional.findMany({
     where: { alunoId: session.user.id, moduloOrigemId: matricula.moduloId },
     include: {
       problemaDestino: {
@@ -64,13 +64,13 @@ export default async function AlunoDashboard() {
     },
   })
 
-  // Mapa de tipos delegados: "ABERTURA" | "FECHAMENTO" | "FECHAMENTO_A" | "FECHAMENTO_B" → EncontroEspecial
+  // Mapa de tipos delegados: "ABERTURA" | "FECHAMENTO" | "FECHAMENTO_A" | "FECHAMENTO_B" → SituacaoExcepcional
   const tiposDelegados = new Map(
-    encontrosEspeciais.map((ee) => [ee.tipoEncontro, ee])
+    situacoesExcepcionais.map((ee) => [ee.tipoEncontro, ee])
   )
 
-  // Submissões dos encontros especiais (para saber se o aluno já avaliou lá fora)
-  const problemasExternosIds = encontrosEspeciais.map((e) => e.problemaDestinoId)
+  // Submissões das situações excepcionais (para saber se o aluno já avaliou lá fora)
+  const problemasExternosIds = situacoesExcepcionais.map((e) => e.problemaDestinoId)
   const submissoesExternas   = problemasExternosIds.length > 0
     ? await prisma.submissao.findMany({
         where: { problemaId: { in: problemasExternosIds }, avaliadorId: session.user.id },
@@ -215,18 +215,18 @@ export default async function AlunoDashboard() {
           })}
         </div>
 
-        {/* ── Encontros Especiais ─────────────────────────────────────── */}
-        {encontrosEspeciais.length > 0 && (
+        {/* ── Situações Excepcionais ─────────────────────────────────────── */}
+        {situacoesExcepcionais.length > 0 && (
           <section className="mt-8">
             <h2 className="text-base font-bold text-[#1F4E79] mb-1 flex items-center gap-2">
-              🔄 Encontros Especiais
+              🔄 Situações Excepcionais
             </h2>
             <p className="text-xs text-gray-400 mb-3">
               Você foi redistribuído temporariamente para outra tutoria nestes encontros.
               Sua nota será calculada normalmente e registrada no seu módulo de origem.
             </p>
             <div className="space-y-3">
-              {encontrosEspeciais.map((ee) => {
+              {situacoesExcepcionais.map((ee) => {
                 const jaFez = submissoesExternas.some(
                   (s) =>
                     s.problemaId   === ee.problemaDestinoId &&

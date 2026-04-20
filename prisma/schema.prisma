@@ -44,7 +44,7 @@ model Usuario {
 
   modulosTutor        Modulo[]         @relation("Tutor")
   coTutorEm           CoTutor[]
-  encontrosEspeciais  EncontroEspecial[]
+  situacoesExcepcionais  SituacaoExcepcional[]
   matriculas          Matricula[]
   avaliacoesTutor     AvaliacaoTutor[]
   avaliacoesFeitas    AvaliacaoAluno[] @relation("Avaliador")
@@ -76,7 +76,7 @@ model Modulo {
   matriculas Matricula[]
   problemas  Problema[]
   coTutores  CoTutor[]
-  encontrosEspeciaisOrigem EncontroEspecial[] @relation("EncontrosEspeciaisOrigem")
+  situacoesExcepcionaisOrigem SituacaoExcepcional[] @relation("SituacoesExcepcionaisOrigem")
 
   @@unique([ano, tutoria, turma, tutorId])
   @@map("modulos")
@@ -122,7 +122,7 @@ model CoTutorPermissao {
 // As avaliações ficam no Módulo B; o cálculo da nota formativa do Módulo A
 // busca as avaliações externas via esta tabela.
 
-model EncontroEspecial {
+model SituacaoExcepcional {
   id                String       @id @default(uuid())
   alunoId           String       @map("aluno_id")
   moduloOrigemId    String       @map("modulo_origem_id")    // módulo do aluno (Módulo A)
@@ -132,13 +132,13 @@ model EncontroEspecial {
   criadoEm          DateTime     @default(now()) @map("criado_em")
 
   aluno           Usuario  @relation(fields: [alunoId],           references: [id])
-  moduloOrigem    Modulo   @relation("EncontrosEspeciaisOrigem",   fields: [moduloOrigemId],    references: [id])
-  problemaDestino Problema @relation("EncontrosEspeciaisDestino",  fields: [problemaDestinoId], references: [id])
+  moduloOrigem    Modulo   @relation("SituacoesExcepcionaisOrigem",   fields: [moduloOrigemId],    references: [id])
+  problemaDestino Problema @relation("SituacoesExcepcionaisDestino",  fields: [problemaDestinoId], references: [id])
 
   // Um aluno só pode ter UM destino por tipo de encontro por módulo de origem
   // Garante que o mesmo aluno não seja enviado a dois lugares para a mesma abertura/fechamento
   @@unique([alunoId, moduloOrigemId, tipoEncontro])
-  @@map("encontros_especiais")
+  @@map("situacoes_excepcionais")
 }
 
 // ─────────────────────────────────────────────
@@ -183,7 +183,7 @@ model Problema {
   avaliacoesAluno AvaliacaoAluno[]
   submissoes      Submissao[]
   coTutorPerms           CoTutorPermissao[]
-  encontrosEspeciaisDestino EncontroEspecial[] @relation("EncontrosEspeciaisDestino")
+  situacoesExcepcionaisDestino SituacaoExcepcional[] @relation("SituacoesExcepcionaisDestino")
 
   @@unique([moduloId, numero])
   @@map("problemas")

@@ -53,13 +53,13 @@ export async function GET(req: NextRequest) {
     prisma.avaliacaoAluno.findMany({ where: { problema: { moduloId } } }),
   ])
 
-  // Avaliações externas via encontros especiais (alunos redistribuídos)
-  const encontrosEspeciais = await prisma.encontroEspecial.findMany({
+  // Avaliações externas via situações excepcionais (alunos redistribuídos)
+  const situacoesExcepcionais = await prisma.situacaoExcepcional.findMany({
     where:   { moduloOrigemId: moduloId },
     select:  { alunoId: true, problemaDestinoId: true, tipoEncontro: true },
   })
 
-  const problemasDestinoIds = [...new Set(encontrosEspeciais.map((e) => e.problemaDestinoId))]
+  const problemasDestinoIds = [...new Set(situacoesExcepcionais.map((e) => e.problemaDestinoId))]
   const [avTutorExt, avAlunoExt] = problemasDestinoIds.length > 0
     ? await Promise.all([
         prisma.avaliacaoTutor.findMany({
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
     return arredondar(nota)
   }
 
-  // Wrapper: busca primeiro no módulo local, depois em encontros especiais
+  // Wrapper: busca primeiro no módulo local, depois em situações excepcionais
   const calcNotaParaTipo = (
     problemaId: string,
     alunoId:    string,
@@ -134,9 +134,9 @@ export async function GET(req: NextRequest) {
     const notaInterna = calcNotaParaProblema(problemaId, alunoId, tipo, avaliacoesTutor, avaliacoesAluno)
     if (notaInterna !== null) return notaInterna
     // Nota externa (aluno foi redistribuído para outro módulo neste tipo de encontro)
-    const ee = encontrosEspeciais.find(
+    const ee = situacoesExcepcionais.find(
       (e) => e.alunoId === alunoId && e.tipoEncontro === tipo
-      // Nota: para encontros especiais, qualquer problema externo com aquele tipo conta
+      // Nota: para situações excepcionais, qualquer problema externo com aquele tipo conta
     )
     if (!ee) return null
     return calcNotaParaProblema(ee.problemaDestinoId, alunoId, tipo, avTutorExt as any, avAlunoExt as any)

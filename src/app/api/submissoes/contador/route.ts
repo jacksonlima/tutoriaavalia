@@ -13,8 +13,8 @@
  *
  * Cálculo do "total":
  *   - Começa com os alunos MATRICULADOS no módulo
- *   - Subtrai alunos DELEGADOS PARA FORA via EncontroEspecial (por problema+tipo)
- *   - Soma VISITANTES recebidos via EncontroEspecial (por problema+tipo)
+ *   - Subtrai alunos DELEGADOS PARA FORA via SituacaoExcepcional (por problema+tipo)
+ *   - Soma VISITANTES recebidos via SituacaoExcepcional (por problema+tipo)
  */
 
 import { auth } from '@/lib/auth'
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
   for (const prob of problemas) {
     for (const { tipo, ativo } of tiposPorProblema(prob)) {
       // Alunos delegados PARA FORA (saíram do grupo para este tipo+prob)
-      const delegadosParaFora = await prisma.encontroEspecial.count({
+      const delegadosParaFora = await prisma.situacaoExcepcional.count({
         where: {
           moduloOrigemId: moduloId,
           tipoEncontro:   tipo,
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
       })
 
       // Visitantes recebidos neste problema+tipo (vieram de outros módulos)
-      const visitantesRecebidos = await prisma.encontroEspecial.count({
+      const visitantesRecebidos = await prisma.situacaoExcepcional.count({
         where: { problemaDestinoId: prob.id, tipoEncontro: tipo },
       })
 

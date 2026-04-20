@@ -9,7 +9,7 @@
  * Regras de notificação:
  * - Sempre notifica o tutor do módulo ao qual o problema pertence.
  * - Notifica co-tutores que tenham permissão para aquele problema + tipoEncontro.
- * - Encontros Especiais: o aluno submete no problema do módulo DESTINO,
+ * - Situações Excepcionais: o aluno submete no problema do módulo DESTINO,
  *   logo o tutor destino é notificado automaticamente pela regra acima.
  */
 
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
   const estaMatriculado = problema.modulo.matriculas.length > 0
   const estaVisitando   = !estaMatriculado
-    ? await prisma.encontroEspecial.findFirst({
+    ? await prisma.situacaoExcepcional.findFirst({
         where: { alunoId: session.user.id, problemaDestinoId: problemaId, tipoEncontro },
       })
     : null

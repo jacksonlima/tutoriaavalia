@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   if (!modulo || modulo.tutorId !== session.user.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
-  const encontros = await prisma.encontroEspecial.findMany({
+  const encontros = await prisma.situacaoExcepcional.findMany({
     where:   { moduloOrigemId: moduloId },
     include: {
       aluno: { select: { id: true, nome: true, email: true } },
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
   // Upsert: cria ou atualiza cada alocação
   const criados = []
   for (const a of alocacoes) {
-    const ee = await prisma.encontroEspecial.upsert({
+    const ee = await prisma.situacaoExcepcional.upsert({
       where: {
         alunoId_moduloOrigemId_tipoEncontro: {
           alunoId:        a.alunoId,
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
 
 // ─────────────────────────────────────────────────────────────────
 // DELETE /api/encontros-especiais
-// Body: { encontroEspecialId } — remove uma realocação específica
+// Body: { situacaoExcepcionalId } — remove uma realocação específica
 // ─────────────────────────────────────────────────────────────────
 export async function DELETE(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
@@ -152,17 +152,17 @@ export async function DELETE(req: NextRequest) {
   if (!session || session.user.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
-  const { encontroEspecialId } = await req.json()
-  if (!encontroEspecialId)
-    return NextResponse.json({ error: 'encontroEspecialId obrigatório' }, { status: 400 })
+  const { situacaoExcepcionalId } = await req.json()
+  if (!situacaoExcepcionalId)
+    return NextResponse.json({ error: 'situacaoExcepcionalId obrigatório' }, { status: 400 })
 
-  const ee = await prisma.encontroEspecial.findUnique({
-    where:   { id: encontroEspecialId },
+  const ee = await prisma.situacaoExcepcional.findUnique({
+    where:   { id: situacaoExcepcionalId },
     include: { moduloOrigem: { select: { tutorId: true } } },
   })
   if (!ee || ee.moduloOrigem.tutorId !== session.user.id)
     return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
-  await prisma.encontroEspecial.delete({ where: { id: encontroEspecialId } })
+  await prisma.situacaoExcepcional.delete({ where: { id: situacaoExcepcionalId } })
   return NextResponse.json({ ok: true })
 }

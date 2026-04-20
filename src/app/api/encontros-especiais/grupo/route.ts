@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 //
 // Retorna o grupo completo de alunos que participam de um encontro,
 // incluindo tanto os alunos matriculados no módulo QUANTO os visitantes
-// (alunos de outros módulos redistribuídos via EncontroEspecial).
+// (alunos de outros módulos redistribuídos via SituacaoExcepcional).
 //
 // Usado pela página do aluno para montar a lista de avaliação quando
 // o aluno é visitante ou quando um aluno regular precisa ver os visitantes.
@@ -42,13 +42,13 @@ export async function GET(req: NextRequest) {
   if (!problema)
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
 
-  // Verifica se o aluno tem acesso: matriculado no módulo OU visitante via EncontroEspecial
+  // Verifica se o aluno tem acesso: matriculado no módulo OU visitante via SituacaoExcepcional
   const alunoId       = session.user.id
   const matriculados  = problema.modulo.matriculas.map((m) => m.usuario)
   const estaMatriculado = matriculados.some((a) => a.id === alunoId)
 
   // Busca visitantes (alunos de outros módulos alocados para este problema+tipo)
-  const visitantes = await prisma.encontroEspecial.findMany({
+  const visitantes = await prisma.situacaoExcepcional.findMany({
     where:   { problemaDestinoId: problemaId, tipoEncontro: tipoEncontro as any },
     include: { aluno: { select: { id: true, nome: true } } },
   })

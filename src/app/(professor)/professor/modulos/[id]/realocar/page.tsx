@@ -152,7 +152,7 @@ function RealocarPageInner() {
     const res = await fetch('/api/encontros-especiais', {
       method:  'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ encontroEspecialId: id }),
+      body:    JSON.stringify({ situacaoExcepcionalId: id }),
     })
     if (res.ok) {
       setExistentes((prev) => prev.filter((e) => e.id !== id))
@@ -203,7 +203,7 @@ function RealocarPageInner() {
         {/* ── Cabeçalho ── */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h1 className="text-xl font-bold text-[#1F4E79] mb-1">
-            🔄 Encontros Especiais
+            🔄 Situações Excepcionais
           </h1>
           <p className="text-sm font-medium text-gray-700">
             {modulo?.nome}

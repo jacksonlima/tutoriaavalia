@@ -53,7 +53,7 @@ export async function DELETE() {
       await tx.avaliacaoAluno.deleteMany({ where: { avaliadoId: userId } })
 
       // 5. Encontros especiais onde o aluno estava realocado
-      await tx.encontroEspecial.deleteMany({ where: { alunoId: userId } })
+      await tx.situacaoExcepcional.deleteMany({ where: { alunoId: userId } })
 
       // 6. Co-tutor permissões (se era co-tutor em algum módulo)
       const coTutores = await tx.coTutor.findMany({

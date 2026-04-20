@@ -54,7 +54,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   // Edição inline de permissões
   const [editandoId,  setEditandoId]  = useState<string|null>(null)
   const [permsEdit,   setPermsEdit]   = useState<{problemaId:string;tipoEncontro:string}[]>([])
-  // Encontros Especiais
+  // Situações Excepcionais
   const [gerEE,         setGerEE]         = useState(false)
   const [encontrosEsp,  setEncontrosEsp]  = useState<any[]>([])
   const [eeAlunos,      setEeAlunos]      = useState<string[]>([])  // ids selecionados
@@ -243,7 +243,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     toast({ title: 'Substituto removido', description: nome })
   }
 
-  // ── Encontros Especiais ────────────────────────────────────────
+  // ── Situações Excepcionais ────────────────────────────────────────
   const abrirGerEE = async () => {
     const novo = !gerEE
     setGerEE(novo)
@@ -270,7 +270,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   }
   const probDest = problemasDoDest.find((p: any) => p.id === eeProblema)
 
-  const salvarEncontroEspecial = async () => {
+  const salvarSituacaoExcepcional = async () => {
     if (!eeProblema || !eeTipo || eeAlunos.length === 0) {
       toast({ title: 'Selecione aluno(s), problema destino e tipo de encontro', variant: 'destructive' }); return
     }
@@ -300,10 +300,10 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     } finally { setSalvandoEE(false) }
   }
 
-  const removerEncontroEspecial = async (id: string) => {
+  const removerSituacaoExcepcional = async (id: string) => {
     await fetch('/api/encontros-especiais', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ encontroEspecialId: id }),
+      body: JSON.stringify({ situacaoExcepcionalId: id }),
     })
     setEncontrosEsp((prev) => prev.filter((e: any) => e.id !== id))
     toast({ title: 'Encontro especial removido' })
@@ -663,7 +663,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
             </div>
           )}
 
-          {/* ── Encontros Especiais — apenas para titular ── */}
+          {/* ── Situações Excepcionais — apenas para titular ── */}
           {isTitular && (
             <a
               href={`/professor/modulos/${modulo.id}/realocar`}
@@ -671,7 +671,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
               className="flex items-center justify-between w-full border border-purple-200 rounded-xl px-4 py-2.5 bg-purple-50 hover:bg-purple-100 transition-colors text-sm"
             >
               <span className="font-medium text-purple-800">
-                🔄 Encontros Especiais
+                🔄 Situações Excepcionais
               </span>
               <span className="text-purple-400 text-xs">Gerenciar →</span>
             </a>

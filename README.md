@@ -42,40 +42,6 @@ Login de desenvolvimento: `http://localhost:3000/dev/login`
 
 ---
 
-## 🧪 Testes
-
-Duas suítes:
-
-```bash
-# Unitários — fórmulas de nota e schemas Zod (rápido, sem banco)
-npm run test:run
-
-# Integração — Server Actions + Prisma com Postgres embutido
-npm run test:integration
-
-# E2E — fluxos críticos no browser (Playwright + Next dev + Postgres embutido)
-npm run test:e2e
-
-# Todas as suítes (unit + integração + E2E)
-npm run test:all
-
-# Modo watch (dev)
-npm test
-```
-
-A suíte **E2E** sobe um Postgres embutido numa porta aleatória, aplica o
-schema via `prisma db push`, popula o banco com tutor/alunos/módulo e então
-roda o Next em `dev` na porta 3100. Tudo orquestrado pelo wrapper
-[`e2e/run.ts`](e2e/run.ts). Cobre: login do tutor → dashboard, login do
-aluno → dashboard, redirect de rotas protegidas e navegação do tutor.
-
-A suíte de integração sobe um Postgres embutido (`embedded-postgres`) na primeira
-execução — sem Docker, sem instalar nada, ~5s de inicialização. Após o boot, cada
-teste é isolado por `truncateAll()` em `beforeEach`. Detalhes em
-[`src/test/`](src/test/).
-
----
-
 ## 🏗 Stack tecnológica
 
 | Camada | Tecnologia |
