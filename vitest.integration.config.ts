@@ -13,10 +13,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.integration.test.ts'],
+    // Vitest 4: pool options agora são top-level (não dentro de poolOptions)
     pool: 'forks',
-    poolOptions: {
-      forks: { singleFork: true },
-    },
+    singleFork: true,
     testTimeout: 30000,
     hookTimeout: 30000,
     reporters: ['verbose'],

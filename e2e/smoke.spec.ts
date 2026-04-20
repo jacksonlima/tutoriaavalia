@@ -23,15 +23,17 @@ test.describe('Páginas públicas', () => {
 
   test('página de privacidade é pública (sem login)', async ({ page }) => {
     await page.goto('/privacidade')
-    await expect(page.getByText('Política de Privacidade')).toBeVisible()
-    await expect(page.getByText('LGPD')).toBeVisible()
-    await expect(page.getByText('Jackson Cordeiro Lima')).toBeVisible()
+    // Usa getByRole para evitar ambiguidade (o texto aparece no h1 e no conteúdo)
+    await expect(page.getByRole('heading', { name: 'Política de Privacidade' })).toBeVisible()
+    await expect(page.getByText('Jackson Cordeiro Lima').first()).toBeVisible()
+    await expect(page.getByText('Lei Geral de Proteção')).toBeVisible()
   })
 
   test('canal de direitos LGPD é público', async ({ page }) => {
     await page.goto('/direitos')
-    await expect(page.getByText('Exercício de Direitos LGPD')).toBeVisible()
-    await expect(page.getByText('Enviar solicitação')).toBeVisible()
+    // Usa getByRole para evitar ambiguidade (o texto aparece no h1 e em um <strong>)
+    await expect(page.getByRole('heading', { name: 'Exercício de Direitos LGPD' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Enviar solicitação' })).toBeVisible()
   })
 
   test('página de login tem link para política de privacidade', async ({ page }) => {

@@ -1,0 +1,151 @@
+# TutoriaAvalia v2 — CI: Testes Automatizados
+# Autor: Jackson Lima — CESUPA
+#
+# Roda a cada push/PR na branch main:
+#   1. Testes unitários (Vitest) — funções de notas e cálculos
+#   2. Testes de integração (Vitest + Postgres) — banco de dados
+#   3. Testes E2E (Playwright + Chromium) — fluxo do sistema no browser
+
+name: Testes Automatizados
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # evita warnings de deprecação
+
+jobs:
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 1 — Testes Unitários (sem banco, sem servidor)
+  # ────────────────────────────────────────────────────────────────
+  unit:
+    name: Vitest (unit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar testes unitários
+        run: npm run test:run
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 2 — Testes de Integração (Vitest + Postgres real)
+  # ────────────────────────────────────────────────────────────────
+  integration:
+    name: Vitest (integração + Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: tutoriaavalia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_test
+      DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_test
+      NEXTAUTH_SECRET: secret-para-ci
+      AUTH_TRUST_HOST: 'true'
+      ALLOWED_EMAIL_DOMAIN: ''
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar migrations no banco de teste
+        run: npx prisma migrate deploy
+
+      - name: Rodar testes de integração
+        run: npm run test:integration
+
+  # ────────────────────────────────────────────────────────────────
+  # JOB 3 — Testes E2E (Playwright + Chromium + Next.js)
+  # ────────────────────────────────────────────────────────────────
+  e2e:
+    name: Playwright (E2E + Next dev + Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: tutoriaavalia_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_e2e
+      DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_e2e
+      NEXTAUTH_SECRET: secret-para-ci
+      AUTH_TRUST_HOST: 'true'
+      ALLOWED_EMAIL_DOMAIN: ''
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar migrations no banco E2E
+        run: npx prisma migrate deploy
+
+      - name: Instalar browser Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Rodar testes E2E
+        run: npm run test:e2e
+
+      - name: Upload do relatório Playwright
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
