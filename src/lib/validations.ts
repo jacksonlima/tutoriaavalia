@@ -82,7 +82,7 @@ export const criarModuloSchema = z.object({
 
   // Salto Triplo
   temSaltoTriplo:       z.boolean().default(false),
-  quantidadeSaltos:     z.number().int().min(1).max(10).optional(),
+  quantidadeSaltos:     z.number().int().min(0).max(10).optional(),
   problemasSaltoTriplo: z.array(z.number().int().min(1)).optional(),
 })
 
