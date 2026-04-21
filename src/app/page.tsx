@@ -8,6 +8,9 @@ export default async function Home() {
 
   if (!session) redirect('/login')
 
+  // Protege contra session.user sem papel (ex: durante testes E2E ou cold start)
+  if (!session.user) redirect('/login')
+
   if (session.user.papel === 'TUTOR') redirect('/professor/dashboard')
 
   redirect('/aluno/dashboard')

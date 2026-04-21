@@ -37,7 +37,7 @@ jobs:
           cache: 'npm'
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Rodar testes unitários
         run: npm run test:run
@@ -82,7 +82,7 @@ jobs:
           cache: 'npm'
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Rodar migrations no banco de teste
         run: npx prisma migrate deploy
@@ -115,8 +115,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_e2e
       DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/tutoriaavalia_e2e
-      NEXTAUTH_SECRET: secret-para-ci
+      NEXTAUTH_SECRET: secret-para-ci-nao-usar-em-producao
+      AUTH_SECRET: secret-para-ci-nao-usar-em-producao
       AUTH_TRUST_HOST: 'true'
+      NEXTAUTH_URL: http://localhost:3000
       ALLOWED_EMAIL_DOMAIN: ''
       PLAYWRIGHT_BASE_URL: http://localhost:3000
 
@@ -131,7 +133,7 @@ jobs:
           cache: 'npm'
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Rodar migrations no banco E2E
         run: npx prisma migrate deploy
