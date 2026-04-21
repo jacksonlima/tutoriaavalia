@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const moduloId = new URL(req.url).searchParams.get('moduloId')
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const moduloRef = await prisma.modulo.findUnique({
     where: { id: moduloId },
   })
-  if (!moduloRef || moduloRef.tutorId !== session.user.id)
+  if (!moduloRef || moduloRef.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   // Busca todos os módulos com o mesmo nome + turma + ano (excluindo o próprio)

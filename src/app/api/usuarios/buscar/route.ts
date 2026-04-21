@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const url = new URL(req.url)

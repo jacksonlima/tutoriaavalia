@@ -58,7 +58,7 @@ export const dynamic = 'force-dynamic'
 export async function PATCH(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest) {
 
   // Verifica que o problema pertence a um módulo deste tutor
   // Verifica que o usuário é titular OU co-tutor do módulo
-  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session.user.id)
+  const autorizado = await isTutorOuCoTutor(prisma, problemaId, session?.user?.id)
   if (!autorizado) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
   }

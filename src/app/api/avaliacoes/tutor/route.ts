@@ -59,7 +59,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   const { problemaId, tipoEncontro, avaliacoes } = result.data
 
   // Verifica permissão granular (titular = tudo, co-tutor = só o que foi autorizado)
-  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session.user.id)
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id)
   if (!autorizado) {
     return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         create: {
           problemaId,
           avaliadoId:        av.avaliadoId,
-          tutorId:           session.user.id,
+          tutorId:           session?.user?.id,
           tipoEncontro,
           c1:                av.c1,
           c2:                av.c2,
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Verifica permissão granular
-  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session.user.id)
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id)
   if (!autorizado) {
     return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }

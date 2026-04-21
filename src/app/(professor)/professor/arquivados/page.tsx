@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 export default async function ModulosArquivadosPage() {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') redirect('/login')
+  if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
   const modulos = await prisma.modulo.findMany({
-    where:   { tutorId: session.user.id, arquivado: true },
+    where:   { tutorId: session?.user?.id, arquivado: true },
     include: {
       problemas:  { orderBy: { numero: 'asc' } },
       matriculas: {
@@ -25,7 +25,7 @@ export default async function ModulosArquivadosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session.user.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
+      <TopBar nome={session?.user?.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -111,10 +111,10 @@ function DesarquivarBtn({ moduloId }: { moduloId: string }) {
         const { auth: authFn } = await import('@/lib/auth')
         const { prisma: db }   = await import('@/lib/db')
         const session = await authFn()
-        if (!session || session.user.papel !== 'TUTOR') return
+        if (!session || session?.user?.papel !== 'TUTOR') return
 
         const modulo = await db.modulo.findUnique({ where: { id: moduloId } })
-        if (!modulo || modulo.tutorId !== session.user.id) return
+        if (!modulo || modulo.tutorId !== session?.user?.id) return
 
         await db.modulo.update({
           where: { id: moduloId },

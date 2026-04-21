@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -29,10 +29,10 @@ export async function GET(req: NextRequest) {
   if (!modulo) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
-  if (modulo.tutorId !== session.user.id) {
+  if (modulo.tutorId !== session?.user?.id) {
     const { prisma: p2 } = await import('@/lib/db')
     const coTutor = await p2.coTutor.findUnique({
-      where: { moduloId_tutorId: { moduloId, tutorId: session.user.id } },
+      where: { moduloId_tutorId: { moduloId, tutorId: session?.user?.id } },
     })
     if (!coTutor) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })

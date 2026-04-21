@@ -37,7 +37,7 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
   }
 
   // ── 2. Autorização de papel ────────────────────────────────────
-  if (session.user.papel !== 'TUTOR') {
+  if (session?.user?.papel !== 'TUTOR') {
     return { sucesso: false, erro: 'Acesso negado: apenas professores podem editar módulos.' }
   }
 
@@ -58,7 +58,7 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
   }
 
   // Apenas o titular pode editar — co-tutores têm acesso somente leitura
-  if (moduloNoBanco.tutorId !== session.user.id) {
+  if (moduloNoBanco.tutorId !== session?.user?.id) {
     return { sucesso: false, erro: 'Acesso restrito: você não é o professor titular desta turma.' }
   }
 

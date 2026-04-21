@@ -34,7 +34,7 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
-  const userId = session.user.id
+  const userId = session?.user?.id
 
   try {
     await prisma.$transaction(async (tx) => {

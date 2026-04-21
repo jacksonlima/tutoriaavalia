@@ -21,7 +21,7 @@ export async function criarModuloAction(dadosBrutos: unknown) {
   }
 
   // ── 2. Autorização de papel ────────────────────────────────────
-  if (session.user.papel !== 'TUTOR') {
+  if (session?.user?.papel !== 'TUTOR') {
     return { sucesso: false, erro: 'Acesso negado: apenas professores podem criar módulos.' }
   }
 
@@ -60,7 +60,7 @@ export async function criarModuloAction(dadosBrutos: unknown) {
   try {
     const novoModulo = await prisma.$transaction(async (tx) => {
       const modulo = await tx.modulo.create({
-        data: { nome, ano, semestre, tutoria, turma, tutorId: session.user.id },
+        data: { nome, ano, semestre, tutoria, turma, tutorId: session?.user?.id },
       })
 
       // Cria problemas com suporte completo ao Salto Triplo

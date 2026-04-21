@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -38,11 +38,11 @@ export async function GET(req: NextRequest) {
   // Verifica que o tutor tem acesso ao módulo (titular ou co-tutor)
   const [modulo, coTutor] = await Promise.all([
     prisma.modulo.findFirst({
-      where:   { id: moduloId, tutorId: session.user.id },
+      where:   { id: moduloId, tutorId: session?.user?.id },
       select:  { id: true },
     }),
     prisma.coTutor.findFirst({
-      where:  { moduloId, tutorId: session.user.id },
+      where:  { moduloId, tutorId: session?.user?.id },
       select: { id: true },
     }),
   ])

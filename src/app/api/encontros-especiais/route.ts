@@ -10,14 +10,14 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const moduloId = new URL(req.url).searchParams.get('moduloId')
   if (!moduloId) return NextResponse.json({ error: 'moduloId obrigatório' }, { status: 400 })
 
   const modulo = await prisma.modulo.findUnique({ where: { id: moduloId } })
-  if (!modulo || modulo.tutorId !== session.user.id)
+  if (!modulo || modulo.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   const encontros = await prisma.situacaoExcepcional.findMany({
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const { moduloOrigemId, observacao, alocacoes } = await req.json()
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     where:   { id: moduloOrigemId },
     include: { matriculas: { select: { usuarioId: true } } },
   })
-  if (!moduloOrigem || moduloOrigem.tutorId !== session.user.id)
+  if (!moduloOrigem || moduloOrigem.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   const alunosDoModulo = new Set(moduloOrigem.matriculas.map((m) => m.usuarioId))
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const { situacaoExcepcionalId } = await req.json()
@@ -160,7 +160,7 @@ export async function DELETE(req: NextRequest) {
     where:   { id: situacaoExcepcionalId },
     include: { moduloOrigem: { select: { tutorId: true } } },
   })
-  if (!ee || ee.moduloOrigem.tutorId !== session.user.id)
+  if (!ee || ee.moduloOrigem.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
   await prisma.situacaoExcepcional.delete({ where: { id: situacaoExcepcionalId } })

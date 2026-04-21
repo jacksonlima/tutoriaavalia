@@ -44,7 +44,7 @@ function cls(...classes: (string | false | undefined)[]): string {
 export default async function ExportarRelatorio({ searchParams }: Props) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') redirect('/login')
+  if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
   const params   = await searchParams
   const moduloId = params.moduloId
@@ -64,9 +64,9 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
   })
   if (!modulo) redirect('/professor/dashboard')
 
-  if (modulo.tutorId !== session.user.id) {
+  if (modulo.tutorId !== session?.user?.id) {
     const coTutor = await prisma.coTutor.findUnique({
-      where: { moduloId_tutorId: { moduloId, tutorId: session.user.id } },
+      where: { moduloId_tutorId: { moduloId, tutorId: session?.user?.id } },
     })
     if (!coTutor) redirect('/professor/dashboard')
   }

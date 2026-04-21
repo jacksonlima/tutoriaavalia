@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 export default async function AlunoDashboard() {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'ALUNO') redirect('/login')
+  if (!session || session?.user?.papel !== 'ALUNO') redirect('/login')
 
   const matricula = await prisma.matricula.findFirst({
-    where: { usuarioId: session.user.id },
+    where: { usuarioId: session?.user?.id },
     include: {
       modulo: {
         include: {
@@ -27,7 +27,7 @@ export default async function AlunoDashboard() {
   if (!modulo) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <TopBar nome={session.user.nome} papel="ALUNO" />
+        <TopBar nome={session?.user?.nome} papel="ALUNO" />
         <main className="max-w-lg mx-auto px-4 py-16 text-center">
           <div className="text-5xl mb-4">🎓</div>
           <h1 className="text-xl font-bold text-gray-700 mb-2">Nenhum módulo ativo</h1>
@@ -41,13 +41,13 @@ export default async function AlunoDashboard() {
 
   // Submissões no módulo de origem (encontros normais)
   const submissoes = await prisma.submissao.findMany({
-    where: { problemaId: { in: problemasIds }, avaliadorId: session.user.id },
+    where: { problemaId: { in: problemasIds }, avaliadorId: session?.user?.id },
   })
 
   // Encontros especiais atribuídos a este aluno no módulo de origem
   // Chave de bloqueio: (alunoId, moduloOrigemId, tipoEncontro)
   const situacoesExcepcionais = await prisma.situacaoExcepcional.findMany({
-    where: { alunoId: session.user.id, moduloOrigemId: matricula.moduloId },
+    where: { alunoId: session?.user?.id, moduloOrigemId: matricula.moduloId },
     include: {
       problemaDestino: {
         include: {
@@ -73,7 +73,7 @@ export default async function AlunoDashboard() {
   const problemasExternosIds = situacoesExcepcionais.map((e) => e.problemaDestinoId)
   const submissoesExternas   = problemasExternosIds.length > 0
     ? await prisma.submissao.findMany({
-        where: { problemaId: { in: problemasExternosIds }, avaliadorId: session.user.id },
+        where: { problemaId: { in: problemasExternosIds }, avaliadorId: session?.user?.id },
       })
     : []
 
@@ -107,7 +107,7 @@ export default async function AlunoDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session.user.nome} papel="ALUNO" />
+      <TopBar nome={session?.user?.nome} papel="ALUNO" />
       <main className="max-w-lg mx-auto px-4 py-6">
 
         {/* Cabeçalho do módulo */}

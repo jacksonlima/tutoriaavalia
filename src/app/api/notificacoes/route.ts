@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const mostrarLidas = searchParams.get('todas') === 'true'
 
   const where = {
-    tutorId: session.user.id,
+    tutorId: session?.user?.id,
     ...(mostrarLidas ? {} : { lida: false }),
   }
 
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       orderBy: { criadaEm: 'desc' },
       take:    50,
     }),
-    prisma.notificacao.count({ where: { tutorId: session.user.id, lida: false } }),
+    prisma.notificacao.count({ where: { tutorId: session?.user?.id, lida: false } }),
   ])
 
   return NextResponse.json({ notificacoes, totalNaoLidas })
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -54,13 +54,13 @@ export async function PATCH(req: NextRequest) {
   if (id) {
     // Marca uma notificação específica (garante que pertence ao tutor)
     await prisma.notificacao.updateMany({
-      where: { id, tutorId: session.user.id },
+      where: { id, tutorId: session?.user?.id },
       data:  { lida: true },
     })
   } else {
     // Marca todas como lidas
     await prisma.notificacao.updateMany({
-      where: { tutorId: session.user.id, lida: false },
+      where: { tutorId: session?.user?.id, lida: false },
       data:  { lida: true },
     })
   }

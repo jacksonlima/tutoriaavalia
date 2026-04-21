@@ -12,7 +12,7 @@ interface Props { searchParams: Promise<{ moduloId?: string }> }
 export default async function RelatoriosPage({ searchParams }: Props) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') redirect('/login')
+  if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
   // Next.js 14: searchParams é uma Promise — await obrigatório antes de acessar propriedades
   const params   = await searchParams
@@ -20,7 +20,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
   if (!moduloId) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <TopBar nome={session.user.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
+        <TopBar nome={session?.user?.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
         <main className="max-w-lg mx-auto px-4 py-16 text-center">
           <p className="text-gray-400">Selecione um módulo no painel para ver o relatório.</p>
         </main>
@@ -40,9 +40,9 @@ export default async function RelatoriosPage({ searchParams }: Props) {
   })
   if (!modulo) redirect('/professor/dashboard')
   // Permite acesso se for titular ou co-tutor
-  if (modulo.tutorId !== session.user.id) {
+  if (modulo.tutorId !== session?.user?.id) {
     const coTutor = await prisma.coTutor.findUnique({
-      where: { moduloId_tutorId: { moduloId, tutorId: session.user.id } },
+      where: { moduloId_tutorId: { moduloId, tutorId: session?.user?.id } },
     })
     if (!coTutor) redirect('/professor/dashboard')
   }
@@ -105,7 +105,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session.user.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
+      <TopBar nome={session?.user?.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
       <main className="max-w-5xl mx-auto px-4 py-6">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>

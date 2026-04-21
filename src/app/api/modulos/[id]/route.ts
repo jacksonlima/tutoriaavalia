@@ -23,7 +23,7 @@ export async function PATCH(
 ) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -32,7 +32,7 @@ export async function PATCH(
 
   // Confirma que o módulo pertence a este tutor
   const modulo = await prisma.modulo.findUnique({ where: { id: moduloId } })
-  if (!modulo || modulo.tutorId !== session.user.id) {
+  if (!modulo || modulo.tutorId !== session?.user?.id) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
 
@@ -76,7 +76,7 @@ export async function GET(
 ) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -98,7 +98,7 @@ export async function GET(
   if (!modulo) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
-  const podeVer = await isTitularOuCoTutor(prisma, moduloId, session.user.id)
+  const podeVer = await isTitularOuCoTutor(prisma, moduloId, session?.user?.id)
   if (!podeVer) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
@@ -113,7 +113,7 @@ export async function PUT(
 ) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -130,7 +130,7 @@ export async function PUT(
       },
     },
   })
-  if (!modulo || modulo.tutorId !== session.user.id) {
+  if (!modulo || modulo.tutorId !== session?.user?.id) {
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
 

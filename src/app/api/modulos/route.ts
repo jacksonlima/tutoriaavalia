@@ -11,10 +11,10 @@ export async function GET() {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  if (session.user.papel === 'TUTOR') {
+  if (session?.user?.papel === 'TUTOR') {
     // Módulos onde é titular OU co-tutor
     const coTutorLinks = await prisma.coTutor.findMany({
-      where:  { tutorId: session.user.id },
+      where:  { tutorId: session?.user?.id },
       select: { moduloId: true },
     })
     const coTutorModuloIds = coTutorLinks.map((ct: any) => ct.moduloId)
@@ -23,7 +23,7 @@ export async function GET() {
       where: {
         arquivado: false,
         OR: [
-          { tutorId: session.user.id },
+          { tutorId: session?.user?.id },
           { id: { in: coTutorModuloIds } },
         ],
       },
@@ -42,7 +42,7 @@ export async function GET() {
 
   // Aluno: módulos em que está matriculado
   const matriculas = await prisma.matricula.findMany({
-    where: { usuarioId: session.user.id },
+    where: { usuarioId: session?.user?.id },
     include: {
       modulo: {
         include: {
@@ -63,7 +63,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
   const modulo = await prisma.$transaction(async (tx) => {
     const novoModulo = await tx.modulo.create({
-      data: { nome, ano, tutoria, turma, tutorId: session.user.id },
+      data: { nome, ano, tutoria, turma, tutorId: session?.user?.id },
     })
 
     // Cria os problemas conforme quantidade informada

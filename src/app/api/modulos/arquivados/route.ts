@@ -6,12 +6,12 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR') {
+  if (!session || session?.user?.papel !== 'TUTOR') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
   const modulos = await prisma.modulo.findMany({
-    where:   { tutorId: session.user.id, arquivado: true },
+    where:   { tutorId: session?.user?.id, arquivado: true },
     include: {
       problemas:  { orderBy: { numero: 'asc' } },
       matriculas: {

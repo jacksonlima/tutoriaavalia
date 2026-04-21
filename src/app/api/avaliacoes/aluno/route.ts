@@ -71,7 +71,7 @@ async function criarNotificacoes(
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'ALUNO') {
+  if (!session || session?.user?.papel !== 'ALUNO') {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
           nome:      true,
           tutoria:   true,
           tutorId:   true,
-          matriculas: { where: { usuarioId: session.user.id }, select: { id: true } },
+          matriculas: { where: { usuarioId: session?.user?.id }, select: { id: true } },
         },
       },
     },
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
   const estaMatriculado = problema.modulo.matriculas.length > 0
   const estaVisitando   = !estaMatriculado
     ? await prisma.situacaoExcepcional.findFirst({
-        where: { alunoId: session.user.id, problemaDestinoId: problemaId, tipoEncontro },
+        where: { alunoId: session?.user?.id, problemaDestinoId: problemaId, tipoEncontro },
       })
     : null
 
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
 
   const jaSubmeteu = await prisma.submissao.findUnique({
     where: {
-      problemaId_avaliadorId_tipoEncontro: { problemaId, avaliadorId: session.user.id, tipoEncontro },
+      problemaId_avaliadorId_tipoEncontro: { problemaId, avaliadorId: session?.user?.id, tipoEncontro },
     },
   })
   if (jaSubmeteu) {
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
         where: {
           problemaId_avaliadorId_avaliadoId_tipoEncontro: {
             problemaId,
-            avaliadorId: session.user.id,
+            avaliadorId: session?.user?.id,
             avaliadoId:  av.avaliadoId,
             tipoEncontro,
           },
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
         create: {
           problemaId,
-          avaliadorId: session.user.id,
+          avaliadorId: session?.user?.id,
           avaliadoId:  av.avaliadoId,
           tipoEncontro,
           c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
@@ -177,13 +177,13 @@ export async function POST(req: NextRequest) {
       })
     }
     await tx.submissao.create({
-      data: { problemaId, avaliadorId: session.user.id, tipoEncontro, ipOrigem, userAgent },
+      data: { problemaId, avaliadorId: session?.user?.id, tipoEncontro, ipOrigem, userAgent },
     })
   })
 
   // Notificações: melhor esforço — falha não reverte a submissão
   criarNotificacoes(prisma, {
-    alunoNome:      session.user.nome,
+    alunoNome:      session?.user?.nome,
     problemaId,
     tipoEncontro,
     problemaNumero: problema.numero,
@@ -212,12 +212,12 @@ export async function GET(req: NextRequest) {
 
   const submetido = await prisma.submissao.findUnique({
     where: {
-      problemaId_avaliadorId_tipoEncontro: { problemaId, avaliadorId: session.user.id, tipoEncontro },
+      problemaId_avaliadorId_tipoEncontro: { problemaId, avaliadorId: session?.user?.id, tipoEncontro },
     },
   })
 
   const avaliacoes = await prisma.avaliacaoAluno.findMany({
-    where:   { problemaId, avaliadorId: session.user.id, tipoEncontro },
+    where:   { problemaId, avaliadorId: session?.user?.id, tipoEncontro },
     include: { avaliado: { select: { id: true, nome: true } } },
   })
 

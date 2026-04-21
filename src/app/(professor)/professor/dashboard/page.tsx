@@ -14,7 +14,7 @@ export default async function ProfessorDashboard() {
   const session = await auth()
   
   // Barreira de Segurança
-  if (!session || session.user.papel !== 'TUTOR') redirect('/login')
+  if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
   // O Prisma executará estas buscas diretamente na Vercel (Server Side)
   const include = {
@@ -24,14 +24,14 @@ export default async function ProfessorDashboard() {
 
   // 1. Módulos onde é titular
   const modulosTitular = await prisma.modulo.findMany({
-    where:   { tutorId: session.user.id, arquivado: false },
+    where:   { tutorId: session?.user?.id, arquivado: false },
     include,
     orderBy: { criadoEm: 'desc' },
   })
 
   // 2. Módulos onde é co-tutor (substituto)
   const coTutorEm = await prisma.coTutor.findMany({
-    where:   { tutorId: session.user.id },
+    where:   { tutorId: session?.user?.id },
     include: {
       modulo: {
         include: {
@@ -52,7 +52,7 @@ export default async function ProfessorDashboard() {
   // HTML entregue pronto para o celular do usuário, sem telas de "Carregando..." vazias
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session.user.nome} papel="TUTOR" />
+      <TopBar nome={session?.user?.nome} papel="TUTOR" />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">

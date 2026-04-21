@@ -47,7 +47,7 @@ async function podeAvaliar(
 export async function salvarAvaliacoesTutor(dadosBrutos: unknown) {
   // 1. Autenticação
   const session = await auth()
-  if (!session?.user || session.user.papel !== 'TUTOR') {
+  if (!session?.user || session?.user?.papel !== 'TUTOR') {
     return { sucesso: false, erro: 'Acesso negado.' }
   }
 
@@ -60,7 +60,7 @@ export async function salvarAvaliacoesTutor(dadosBrutos: unknown) {
   const { problemaId, tipoEncontro, avaliacoes } = result.data
 
   // 3. Autorização granular (titular ou co-tutor com permissão)
-  const autorizado = await podeAvaliar(problemaId, tipoEncontro, session.user.id)
+  const autorizado = await podeAvaliar(problemaId, tipoEncontro, session?.user?.id)
   if (!autorizado) {
     return { sucesso: false, erro: 'Sem permissão para avaliar este encontro.' }
   }
@@ -88,7 +88,7 @@ export async function salvarAvaliacoesTutor(dadosBrutos: unknown) {
           create: {
             problemaId,
             avaliadoId:        av.avaliadoId,
-            tutorId:           session.user.id,
+            tutorId:           session?.user?.id,
             tipoEncontro,
             c1:                av.c1,
             c2:                av.c2,
@@ -120,11 +120,11 @@ export async function salvarAvaliacoesTutor(dadosBrutos: unknown) {
 // Para dados iniciais em Server Components, prefira buscar direto no page.tsx.
 export async function getAvaliacoesTutor(problemaId: string, tipoEncontro: string) {
   const session = await auth()
-  if (!session?.user || session.user.papel !== 'TUTOR') {
+  if (!session?.user || session?.user?.papel !== 'TUTOR') {
     throw new Error('Acesso negado')
   }
 
-  const autorizado = await podeAvaliar(problemaId, tipoEncontro, session.user.id)
+  const autorizado = await podeAvaliar(problemaId, tipoEncontro, session?.user?.id)
   if (!autorizado) {
     throw new Error('Sem permissão para visualizar este encontro')
   }

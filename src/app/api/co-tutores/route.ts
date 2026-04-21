@@ -10,14 +10,14 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const moduloId = new URL(req.url).searchParams.get('moduloId')
   if (!moduloId) return NextResponse.json({ error: 'moduloId obrigatório' }, { status: 400 })
 
   const modulo = await prisma.modulo.findUnique({ where: { id: moduloId } })
-  if (!modulo || modulo.tutorId !== session.user.id)
+  if (!modulo || modulo.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   const coTutores = await prisma.coTutor.findMany({
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const { moduloId, email, permissoes } = await req.json()
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Selecione pelo menos uma permissão.' }, { status: 400 })
 
   const modulo = await prisma.modulo.findUnique({ where: { id: moduloId } })
-  if (!modulo || modulo.tutorId !== session.user.id)
+  if (!modulo || modulo.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   const substituto = await prisma.usuario.findUnique({
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   if (substituto.papel !== 'TUTOR')
     return NextResponse.json({ error: 'O usuário não é docente.' }, { status: 400 })
 
-  if (substituto.id === session.user.id)
+  if (substituto.id === session?.user?.id)
     return NextResponse.json({ error: 'Você já é o titular deste módulo.' }, { status: 400 })
 
   // Cria ou recupera o CoTutor
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const { coTutorId, permissoes } = await req.json()
@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
     where:   { id: coTutorId },
     include: { modulo: true },
   })
-  if (!coTutor || coTutor.modulo.tutorId !== session.user.id)
+  if (!coTutor || coTutor.modulo.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
   await prisma.coTutorPermissao.deleteMany({ where: { coTutorId } })
@@ -142,7 +142,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'TUTOR')
+  if (!session || session?.user?.papel !== 'TUTOR')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const { moduloId, tutorId } = await req.json()
@@ -150,7 +150,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'moduloId e tutorId são obrigatórios' }, { status: 400 })
 
   const modulo = await prisma.modulo.findUnique({ where: { id: moduloId } })
-  if (!modulo || modulo.tutorId !== session.user.id)
+  if (!modulo || modulo.tutorId !== session?.user?.id)
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
 
   // Cascade deletes permissoes automatically

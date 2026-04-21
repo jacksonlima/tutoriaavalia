@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
-  if (!session || session.user.papel !== 'ALUNO')
+  if (!session || session?.user?.papel !== 'ALUNO')
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
   const url          = new URL(req.url)
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
 
   // Verifica se o aluno tem acesso: matriculado no módulo OU visitante via SituacaoExcepcional
-  const alunoId       = session.user.id
+  const alunoId       = session?.user?.id
   const matriculados  = problema.modulo.matriculas.map((m) => m.usuario)
   const estaMatriculado = matriculados.some((a) => a.id === alunoId)
 
