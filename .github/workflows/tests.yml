@@ -95,8 +95,8 @@ jobs:
       - name: Verificar conexão com banco
         run: PGPASSWORD=test psql -h localhost -U test -d tutoriaavalia_test -c "SELECT 1"
 
-      - name: Rodar migrations no banco de teste
-        run: npx prisma migrate deploy
+      - name: Aplicar schema no banco de teste
+        run: npx prisma db push --skip-generate
 
       - name: Rodar testes de integração
         run: npm run test:integration
@@ -146,8 +146,8 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
-      - name: Rodar migrations no banco E2E
-        run: npx prisma migrate deploy
+      - name: Aplicar schema no banco E2E
+        run: npx prisma db push --skip-generate
 
       - name: Instalar browser Playwright (Chromium)
         run: npx playwright install --with-deps chromium
