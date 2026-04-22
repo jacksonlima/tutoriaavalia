@@ -46,22 +46,37 @@ export async function PATCH(
   }
 
   if (acao === 'excluir') {
-    // Exclusão em cascata — remove tudo relacionado ao módulo
-    await prisma.$transaction(async (tx) => {
-      // Busca os IDs dos problemas para limpar avaliações
-      const problemas = await tx.problema.findMany({
-        where:  { moduloId },
-        select: { id: true },
-      })
-      const problemasIds = problemas.map((p) => p.id)
+    // ── REGRA DE INTEGRIDADE ──────────────────────────────────────────
+    // Módulos com avaliações lançadas (tutor ou aluno) NÃO podem ser
+    // excluídos — apenas arquivados. Protege registros acadêmicos.
+    const problemas = await prisma.problema.findMany({
+      where:  { moduloId },
+      select: { id: true },
+    })
+    const problemasIds = problemas.map((p) => p.id)
 
-      // Remove na ordem correta (respeitando foreign keys)
+    const [temAvTutor, temAvAluno] = await Promise.all([
+      prisma.avaliacaoTutor.count({ where: { problemaId: { in: problemasIds } } }),
+      prisma.avaliacaoAluno.count({ where: { problemaId: { in: problemasIds } } }),
+    ])
+
+    if (temAvTutor > 0 || temAvAluno > 0) {
+      return NextResponse.json(
+        {
+          error: 'Módulo possui avaliações lançadas e não pode ser excluído. Arquive-o para preservar os dados acadêmicos.',
+          temAvaliacoes: true,
+          totais: { tutor: temAvTutor, aluno: temAvAluno },
+        },
+        { status: 409 }, // 409 Conflict — estado do recurso impede a operação
+      )
+    }
+
+    // Sem avaliações: exclusão em cascata é permitida
+    await prisma.$transaction(async (tx) => {
       await tx.submissao.deleteMany({      where: { problemaId: { in: problemasIds } } })
-      await tx.avaliacaoAluno.deleteMany({ where: { problemaId: { in: problemasIds } } })
-      await tx.avaliacaoTutor.deleteMany({ where: { problemaId: { in: problemasIds } } })
-      await tx.problema.deleteMany({      where: { moduloId } })
-      await tx.matricula.deleteMany({     where: { moduloId } })
-      await tx.modulo.delete({            where: { id: moduloId } })
+      await tx.problema.deleteMany({       where: { moduloId } })
+      await tx.matricula.deleteMany({      where: { moduloId } })
+      await tx.modulo.delete({             where: { id: moduloId } })
     })
     return NextResponse.json({ sucesso: true, acao: 'excluido' })
   }
@@ -103,7 +118,17 @@ export async function GET(
     return NextResponse.json({ error: 'Módulo não encontrado' }, { status: 404 })
   }
 
-  return NextResponse.json(modulo)
+  // Conta avaliações para o frontend saber se pode exibir o botão "Excluir"
+  const problemasIds = modulo.problemas.map((p) => p.id)
+  const [totalAvTutor, totalAvAluno] = await Promise.all([
+    prisma.avaliacaoTutor.count({ where: { problemaId: { in: problemasIds } } }),
+    prisma.avaliacaoAluno.count({ where: { problemaId: { in: problemasIds } } }),
+  ])
+
+  return NextResponse.json({
+    ...modulo,
+    temAvaliacoes: totalAvTutor > 0 || totalAvAluno > 0,
+  })
 }
 
 // PUT /api/modulos/[id] — editar informações do módulo

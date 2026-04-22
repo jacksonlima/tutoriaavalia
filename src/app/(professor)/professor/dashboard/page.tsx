@@ -18,7 +18,13 @@ export default async function ProfessorDashboard() {
 
   // O Prisma executará estas buscas diretamente na Vercel (Server Side)
   const include = {
-    problemas: { orderBy: { numero: 'asc' } },
+    problemas: {
+      orderBy: { numero: 'asc' },
+      include: {
+        // Conta avaliações por problema — usado para bloquear exclusão do módulo
+        _count: { select: { avaliacoesTutor: true, avaliacoesAluno: true } },
+      },
+    },
     _count: { select: { matriculas: true } },
   } as const
 

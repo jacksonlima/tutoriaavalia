@@ -15,6 +15,7 @@ type Problema = {
   temSaltoTriplo: boolean
   fechamentoAAtivo: boolean
   fechamentoBAtivo: boolean
+  _count?: { avaliacoesTutor: number; avaliacoesAluno: number }
 }
 
 type CoTutorPermItem = { id: string; problemaId: string; tipoEncontro: string }
@@ -38,6 +39,13 @@ type ModuloCardProps = {
 
 export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   const [problemas, setProblemas] = useState(modulo.problemas)
+
+  // Derivado: se qualquer problema já tem avaliação lançada (tutor ou aluno),
+  // o módulo NÃO pode ser excluído — apenas arquivado.
+  const temAvaliacoes = problemas.some(
+    (p) => (p._count?.avaliacoesTutor ?? 0) > 0 || (p._count?.avaliacoesAluno ?? 0) > 0,
+  )
+
   const [expandido, setExpandido]       = useState(false)
   const [confirmando, setConfirmando]   = useState<'excluir' | 'arquivar' | null>(null)
   const [processando, setProcessando]   = useState(false)
@@ -110,6 +118,16 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
       })
       if (!res.ok) {
         const json = await res.json()
+        // 409 Conflict: módulo tem avaliações e não pode ser excluído
+        if (res.status === 409 && json.temAvaliacoes) {
+          toast({
+            title: 'Exclusão bloqueada',
+            description: json.error,
+            variant: 'destructive',
+          })
+          setConfirmando(null)
+          return
+        }
         throw new Error(json.error ?? 'Erro ao executar ação')
       }
       toast({ title: acao === 'excluir' ? 'Módulo excluído' : 'Módulo arquivado' })
@@ -693,12 +711,25 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
               >
                 Arquivar
               </button>
-              <button
-                onClick={() => setConfirmando('excluir')}
-                className="flex-1 text-xs border border-red-300 text-red-600 rounded-lg py-2 hover:bg-red-50 transition-colors"
-              >
-                Excluir
-              </button>
+              {/* Botão Excluir: só aparece se NÃO houver avaliações lançadas.
+                  Caso contrário, o módulo deve ser apenas arquivado,
+                  preservando os dados acadêmicos. */}
+              {temAvaliacoes ? (
+                <button
+                  disabled
+                  title="Módulo com avaliações lançadas só pode ser arquivado"
+                  className="flex-1 text-xs border border-gray-200 text-gray-400 rounded-lg py-2 cursor-not-allowed"
+                >
+                  🔒 Excluir
+                </button>
+              ) : (
+                <button
+                  onClick={() => setConfirmando('excluir')}
+                  className="flex-1 text-xs border border-red-300 text-red-600 rounded-lg py-2 hover:bg-red-50 transition-colors"
+                >
+                  Excluir
+                </button>
+              )}
             </div>
           )}
         </div>
