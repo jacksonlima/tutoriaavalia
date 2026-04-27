@@ -1,6 +1,5 @@
 // TutoriaAvalia v2
 // Autor: Jackson Lima — CESUPA
-// Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
 
 generator client {
   provider = "prisma-client-js"
@@ -8,13 +7,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")       // URL com pooler — usada pelo Prisma em runtime (Vercel/serverless)
-  directUrl = env("DIRECT_DATABASE_URL") // URL direta — usada pelo Prisma para migrations
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
-
-// ─────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────
 
 enum Papel {
   TUTOR
@@ -24,13 +19,9 @@ enum Papel {
 enum TipoEncontro {
   ABERTURA
   FECHAMENTO
-  FECHAMENTO_A  // Salto Triplo — primeiro fechamento
-  FECHAMENTO_B  // Salto Triplo — segundo fechamento
+  FECHAMENTO_A
+  FECHAMENTO_B
 }
-
-// ─────────────────────────────────────────────
-// USUÁRIOS
-// ─────────────────────────────────────────────
 
 model Usuario {
   id           String   @id @default(uuid())
@@ -42,108 +33,42 @@ model Usuario {
   criadoEm    DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  modulosTutor        Modulo[]         @relation("Tutor")
-  coTutorEm           CoTutor[]
-  situacoesExcepcionais  SituacaoExcepcional[]
-  matriculas          Matricula[]
-  avaliacoesTutor     AvaliacaoTutor[]
-  avaliacoesFeitas    AvaliacaoAluno[] @relation("Avaliador")
-  avaliacoesRecebidas AvaliacaoAluno[] @relation("Avaliado")
-  submissoes          Submissao[]
-  notificacoes        Notificacao[]
+  modulosTutor         Modulo[]             @relation("Tutor")
+  matriculas           Matricula[]
+  avaliacoesTutor      AvaliacaoTutor[]
+  avaliacoesFeitas     AvaliacaoAluno[]     @relation("Avaliador")
+  avaliacoesRecebidas  AvaliacaoAluno[]     @relation("Avaliado")
+  submissoes           Submissao[]
+  notificacoes         Notificacao[]
+  coTutorPerms         CoTutorPermissao[]
+  janelasComoAluno     JanelaComplementar[] @relation("AlunoJanelaComplementar")
+  janelasComoProfessor JanelaComplementar[] @relation("ProfessorJanelaComplementar")
 
   @@map("usuarios")
 }
 
-// ─────────────────────────────────────────────
-// MÓDULOS
-// ─────────────────────────────────────────────
-
 model Modulo {
-  id            String   @id @default(uuid())
-  nome          String
-  ano           Int
-  semestre      String   @default("01")  // ex: "1º Semestre", "2º Semestre"
-  tutoria       String   // ex: "Tutoria 1", "Tutoria Extra 2"
-  turma         String   // ex: "MD1", "MD2"
-  tutorId       String   @map("tutor_id")
-  ativo         Boolean  @default(true)
-  arquivado     Boolean  @default(false)
+  id        String  @id @default(uuid())
+  nome      String
+  ano       Int
+  tutoria   String
+  turma     String
+  semestre  String  @default("01º Semestre")
+  tutorId   String  @map("tutor_id")
+  ativo     Boolean @default(true)
+  arquivado Boolean @default(false)
   criadoEm    DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  tutor      Usuario     @relation("Tutor", fields: [tutorId], references: [id])
-  matriculas Matricula[]
-  problemas  Problema[]
-  coTutores  CoTutor[]
-  situacoesExcepcionaisOrigem SituacaoExcepcional[] @relation("SituacoesExcepcionaisOrigem")
+  tutor        Usuario            @relation("Tutor", fields: [tutorId], references: [id])
+  matriculas   Matricula[]
+  problemas    Problema[]
+  coTutores    CoTutorPermissao[]
+  notificacoes Notificacao[]
 
   @@unique([ano, tutoria, turma, tutorId])
   @@map("modulos")
 }
-
-// ─────────────────────────────────────────────
-// CO-TUTORES (SUBSTITUTOS)
-// ─────────────────────────────────────────────
-
-model CoTutor {
-  id        String   @id @default(uuid())
-  moduloId  String   @map("modulo_id")
-  tutorId   String   @map("tutor_id")
-  criadoEm  DateTime @default(now()) @map("criado_em")
-
-  modulo      Modulo              @relation(fields: [moduloId], references: [id])
-  tutor       Usuario             @relation(fields: [tutorId], references: [id])
-  permissoes  CoTutorPermissao[]
-
-  @@unique([moduloId, tutorId])
-  @@map("co_tutores")
-}
-
-// Permissões granulares: qual problema + tipo de encontro o substituto pode avaliar
-model CoTutorPermissao {
-  id           String       @id @default(uuid())
-  coTutorId    String       @map("co_tutor_id")
-  problemaId   String       @map("problema_id")
-  tipoEncontro TipoEncontro @map("tipo_encontro")
-
-  coTutor  CoTutor  @relation(fields: [coTutorId], references: [id], onDelete: Cascade)
-  problema Problema @relation(fields: [problemaId], references: [id], onDelete: Cascade)
-
-  @@unique([coTutorId, problemaId, tipoEncontro])
-  @@map("co_tutor_permissoes")
-}
-
-// ─────────────────────────────────────────────
-// ENCONTROS ESPECIAIS (realocação temporária)
-// ─────────────────────────────────────────────
-// Quando um aluno do Módulo A é enviado temporariamente ao Módulo B
-// para participar de um encontro específico, esta tabela registra o vínculo.
-// As avaliações ficam no Módulo B; o cálculo da nota formativa do Módulo A
-// busca as avaliações externas via esta tabela.
-
-model SituacaoExcepcional {
-  id                String       @id @default(uuid())
-  alunoId           String       @map("aluno_id")
-  moduloOrigemId    String       @map("modulo_origem_id")    // módulo do aluno (Módulo A)
-  problemaDestinoId String       @map("problema_destino_id") // problema externo (Módulo B)
-  tipoEncontro      TipoEncontro @map("tipo_encontro")
-  observacao        String?      @map("observacao")          // motivo/observação do professor
-  criadoEm          DateTime     @default(now()) @map("criado_em")
-
-  aluno           Usuario  @relation(fields: [alunoId],           references: [id])
-  moduloOrigem    Modulo   @relation("SituacoesExcepcionaisOrigem",   fields: [moduloOrigemId],    references: [id])
-  problemaDestino Problema @relation("SituacoesExcepcionaisDestino",  fields: [problemaDestinoId], references: [id])
-
-  // Um aluno só pode ter UM destino por tipo de encontro por módulo de origem
-  // Garante que o mesmo aluno não seja enviado a dois lugares para a mesma abertura/fechamento
-  @@unique([alunoId, moduloOrigemId, tipoEncontro])
-  @@map("situacoes_excepcionais")
-}
-
-// ─────────────────────────────────────────────
-// MATRÍCULAS
-// ─────────────────────────────────────────────
 
 model Matricula {
   id            String @id @default(uuid())
@@ -159,39 +84,29 @@ model Matricula {
   @@map("matriculas")
 }
 
-// ─────────────────────────────────────────────
-// PROBLEMAS
-// ─────────────────────────────────────────────
-
 model Problema {
-  id              String  @id @default(uuid())
-  moduloId        String  @map("modulo_id")
-  numero          Int
-  nome            String?
-
-  // Controles de ativação por tipo de encontro
-  aberturaAtiva   Boolean @default(false) @map("abertura_ativa")
-  fechamentoAtivo Boolean @default(false) @map("fechamento_ativo")
-
-  // Salto Triplo: dois fechamentos (A e B)
-  temSaltoTriplo  Boolean @default(false) @map("tem_salto_triplo")
+  id               String  @id @default(uuid())
+  moduloId         String  @map("modulo_id")
+  numero           Int
+  nome             String?
+  aberturaAtiva    Boolean @default(false) @map("abertura_ativa")
+  fechamentoAtivo  Boolean @default(false) @map("fechamento_ativo")
+  temSaltoTriplo   Boolean @default(false) @map("tem_salto_triplo")
   fechamentoAAtivo Boolean @default(false) @map("fechamento_a_ativo")
   fechamentoBAtivo Boolean @default(false) @map("fechamento_b_ativo")
 
-  modulo          Modulo             @relation(fields: [moduloId], references: [id])
-  avaliacoesTutor AvaliacaoTutor[]
-  avaliacoesAluno AvaliacaoAluno[]
-  submissoes      Submissao[]
-  coTutorPerms           CoTutorPermissao[]
+  modulo               Modulo               @relation(fields: [moduloId], references: [id])
+  avaliacoesTutor      AvaliacaoTutor[]
+  avaliacoesAluno      AvaliacaoAluno[]
+  submissoes           Submissao[]
+  coTutorPerms         CoTutorPermissao[]
+  situacoesExcepcionaisOrigem  SituacaoExcepcional[] @relation("SituacoesExcepcionaisOrigem")
   situacoesExcepcionaisDestino SituacaoExcepcional[] @relation("SituacoesExcepcionaisDestino")
+  janelasComplementares        JanelaComplementar[]
 
   @@unique([moduloId, numero])
   @@map("problemas")
 }
-
-// ─────────────────────────────────────────────
-// AVALIAÇÃO DO TUTOR
-// ─────────────────────────────────────────────
 
 model AvaliacaoTutor {
   id                String       @id @default(uuid())
@@ -199,19 +114,16 @@ model AvaliacaoTutor {
   avaliadoId        String       @map("avaliado_id")
   tutorId           String       @map("tutor_id")
   tipoEncontro      TipoEncontro @map("tipo_encontro")
-
-  c1                Decimal  @db.Decimal(3, 1)
-  c2                Decimal  @db.Decimal(3, 1)
-  c3                Decimal  @db.Decimal(3, 1)
-  atitudes          Decimal  @db.Decimal(3, 1)
-  ativCompensatoria Boolean  @default(false) @map("ativ_compensatoria")
-  faltou            Boolean  @default(false) @map("faltou")
-
-  finalizado        Boolean   @default(false)
-  finalizadoEm      DateTime? @map("finalizado_em")
-
-  criadoEm    DateTime @default(now()) @map("criado_em")
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  c1                Decimal      @db.Decimal(3, 1)
+  c2                Decimal      @db.Decimal(3, 1)
+  c3                Decimal      @db.Decimal(3, 1)
+  atitudes          Decimal      @db.Decimal(3, 1)
+  ativCompensatoria Boolean      @default(false) @map("ativ_compensatoria")
+  faltou            Boolean      @default(false)
+  finalizado        Boolean      @default(false)
+  finalizadoEm      DateTime?    @map("finalizado_em")
+  criadoEm         DateTime     @default(now()) @map("criado_em")
+  atualizadoEm     DateTime     @updatedAt @map("atualizado_em")
 
   problema Problema @relation(fields: [problemaId], references: [id])
   avaliado Usuario  @relation(fields: [avaliadoId], references: [id])
@@ -220,24 +132,18 @@ model AvaliacaoTutor {
   @@map("avaliacoes_tutor")
 }
 
-// ─────────────────────────────────────────────
-// AVALIAÇÃO DO ALUNO
-// ─────────────────────────────────────────────
-
 model AvaliacaoAluno {
   id           String       @id @default(uuid())
   problemaId   String       @map("problema_id")
   avaliadorId  String       @map("avaliador_id")
   avaliadoId   String       @map("avaliado_id")
   tipoEncontro TipoEncontro @map("tipo_encontro")
-
-  c1       Decimal @db.Decimal(3, 1)
-  c2       Decimal @db.Decimal(3, 1)
-  c3       Decimal @db.Decimal(3, 1)
-  atitudes Decimal @db.Decimal(3, 1)
-
-  criadoEm    DateTime @default(now()) @map("criado_em")
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  c1           Decimal      @db.Decimal(3, 1)
+  c2           Decimal      @db.Decimal(3, 1)
+  c3           Decimal      @db.Decimal(3, 1)
+  atitudes     Decimal      @db.Decimal(3, 1)
+  criadoEm    DateTime     @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em")
 
   problema  Problema @relation(fields: [problemaId], references: [id])
   avaliador Usuario  @relation("Avaliador", fields: [avaliadorId], references: [id])
@@ -246,10 +152,6 @@ model AvaliacaoAluno {
   @@unique([problemaId, avaliadorId, avaliadoId, tipoEncontro])
   @@map("avaliacoes_aluno")
 }
-
-// ─────────────────────────────────────────────
-// SUBMISSÕES
-// ─────────────────────────────────────────────
 
 model Submissao {
   id           String       @id @default(uuid())
@@ -267,23 +169,66 @@ model Submissao {
   @@map("submissoes")
 }
 
-// ─────────────────────────────────────────────
-// NOTIFICAÇÕES
-// ─────────────────────────────────────────────
-// Criadas automaticamente quando um aluno envia avaliação.
-// Destinadas ao tutor titular e co-tutores com permissão.
+model CoTutorPermissao {
+  id         String   @id @default(uuid())
+  moduloId   String   @map("modulo_id")
+  tutorId    String   @map("tutor_id")
+  problemaId String?  @map("problema_id")
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  modulo   Modulo    @relation(fields: [moduloId], references: [id])
+  tutor    Usuario   @relation(fields: [tutorId], references: [id])
+  problema Problema? @relation(fields: [problemaId], references: [id])
+
+  @@unique([moduloId, tutorId, problemaId])
+  @@map("co_tutor_permissoes")
+}
 
 model Notificacao {
-  id           String   @id @default(uuid())
-  tutorId      String   @map("tutor_id")
-  titulo       String
-  mensagem     String
-  problemaId   String?  @map("problema_id")
-  tipoEncontro String?  @map("tipo_encontro")
-  lida         Boolean  @default(false)
-  criadaEm     DateTime @default(now()) @map("criada_em")
+  id        String    @id @default(uuid())
+  usuarioId String    @map("usuario_id")
+  moduloId  String?   @map("modulo_id")
+  tipo      String
+  titulo    String
+  mensagem  String
+  lida      Boolean   @default(false)
+  criadaEm DateTime  @default(now()) @map("criada_em")
+  lidaEm   DateTime? @map("lida_em")
 
-  tutor        Usuario  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  modulo  Modulo? @relation(fields: [moduloId], references: [id])
 
   @@map("notificacoes")
+}
+
+model SituacaoExcepcional {
+  id                String       @id @default(uuid())
+  problemaOrigemId  String       @map("problema_origem_id")
+  problemaDestinoId String       @map("problema_destino_id")
+  tipoEncontro      TipoEncontro @map("tipo_encontro")
+  motivo            String?
+  criadoEm         DateTime     @default(now()) @map("criado_em")
+
+  problemaOrigem  Problema @relation("SituacoesExcepcionaisOrigem",  fields: [problemaOrigemId],  references: [id])
+  problemaDestino Problema @relation("SituacoesExcepcionaisDestino", fields: [problemaDestinoId], references: [id])
+
+  @@map("situacoes_excepcionais")
+}
+
+model JanelaComplementar {
+  id           String       @id @default(uuid())
+  problemaId   String       @map("problema_id")
+  alunoId      String       @map("aluno_id")
+  tipoEncontro TipoEncontro @map("tipo_encontro")
+  aberta       Boolean      @default(true)
+  criadaPorId  String       @map("criada_por_id")
+  criadaEm    DateTime     @default(now()) @map("criada_em")
+  fechadaEm   DateTime?    @map("fechada_em")
+
+  problema  Problema @relation(fields: [problemaId], references: [id], onDelete: Cascade)
+  aluno     Usuario  @relation("AlunoJanelaComplementar",     fields: [alunoId],     references: [id], onDelete: Cascade)
+  criadaPor Usuario  @relation("ProfessorJanelaComplementar", fields: [criadaPorId], references: [id])
+
+  @@unique([problemaId, alunoId, tipoEncontro])
+  @@map("janelas_complementares")
 }
