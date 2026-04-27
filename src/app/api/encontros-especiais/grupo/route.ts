@@ -5,12 +5,9 @@ export const dynamic = 'force-dynamic'
 
 // GET /api/encontros-especiais/grupo?problemaId=X&tipoEncontro=Y
 //
-// Retorna o grupo completo de alunos que participam de um encontro,
-// incluindo tanto os alunos matriculados no módulo QUANTO os visitantes
-// (alunos de outros módulos redistribuídos via SituacaoExcepcional).
-//
-// Usado pela página do aluno para montar a lista de avaliação quando
-// o aluno é visitante ou quando um aluno regular precisa ver os visitantes.
+// Retorna os alunos do módulo ao qual o problema pertence.
+// SituacaoExcepcional relaciona problemas entre si (não alunos a problemas),
+// por isso a lógica de "visitantes" foi removida — o schema não suporta esse conceito.
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -24,7 +21,6 @@ export async function GET(req: NextRequest) {
   if (!problemaId || !tipoEncontro)
     return NextResponse.json({ error: 'problemaId e tipoEncontro são obrigatórios' }, { status: 400 })
 
-  // Busca o problema e o módulo que o contém
   const problema = await prisma.problema.findUnique({
     where:   { id: problemaId },
     include: {
@@ -42,38 +38,17 @@ export async function GET(req: NextRequest) {
   if (!problema)
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
 
-  // Verifica se o aluno tem acesso: matriculado no módulo OU visitante via SituacaoExcepcional
-  const alunoId       = session?.user?.id
-  const matriculados  = problema.modulo.matriculas.map((m) => m.usuario)
-  const estaMatriculado = matriculados.some((a) => a.id === alunoId)
+  const alunoId     = session?.user?.id
+  const matriculados = problema.modulo.matriculas.map((m) => m.usuario)
+  const pertenceAoGrupo = matriculados.some((a) => a.id === alunoId)
 
-  // Busca visitantes (alunos de outros módulos alocados para este problema+tipo)
-  const visitantes = await prisma.situacaoExcepcional.findMany({
-    where:   { problemaDestinoId: problemaId, tipoEncontro: tipoEncontro as any },
-    include: { aluno: { select: { id: true, nome: true } } },
-  })
-
-  const estaVisitando = visitantes.some((v) => v.alunoId === alunoId)
-
-  // Só retorna se o aluno pertence a este grupo
-  if (!estaMatriculado && !estaVisitando)
+  if (!pertenceAoGrupo)
     return NextResponse.json({ error: 'Você não pertence a este grupo' }, { status: 403 })
 
-  // Combina: alunos regulares + visitantes (sem duplicatas)
-  const alunosRegulares = matriculados
-  const alunosVisitantes = visitantes
-    .map((v) => ({ ...v.aluno, visitante: true }))
-    .filter((v) => !alunosRegulares.some((r) => r.id === v.id))
-
-  const grupo = [
-    ...alunosRegulares,
-    ...alunosVisitantes,
-  ]
-
   return NextResponse.json({
-    grupo,
-    estaVisitando,
-    estaMatriculado,
+    grupo:          matriculados,
+    estaVisitando:  false,
+    estaMatriculado: true,
     modulo: {
       id:      problema.modulo.id,
       nome:    problema.modulo.nome,

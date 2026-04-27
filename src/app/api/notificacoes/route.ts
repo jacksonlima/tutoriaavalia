@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const mostrarLidas = searchParams.get('todas') === 'true'
 
   const where = {
-    tutorId: session?.user?.id,
+    usuarioId: session?.user?.id,
     ...(mostrarLidas ? {} : { lida: false }),
   }
 
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       orderBy: { criadaEm: 'desc' },
       take:    50,
     }),
-    prisma.notificacao.count({ where: { tutorId: session?.user?.id, lida: false } }),
+    prisma.notificacao.count({ where: { usuarioId: session?.user?.id, lida: false } }),
   ])
 
   return NextResponse.json({ notificacoes, totalNaoLidas })
@@ -54,13 +54,13 @@ export async function PATCH(req: NextRequest) {
   if (id) {
     // Marca uma notificação específica (garante que pertence ao tutor)
     await prisma.notificacao.updateMany({
-      where: { id, tutorId: session?.user?.id },
+      where: { id, usuarioId: session?.user?.id },
       data:  { lida: true },
     })
   } else {
     // Marca todas como lidas
     await prisma.notificacao.updateMany({
-      where: { tutorId: session?.user?.id, lida: false },
+      where: { usuarioId: session?.user?.id, lida: false },
       data:  { lida: true },
     })
   }
