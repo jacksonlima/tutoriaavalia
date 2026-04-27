@@ -7,9 +7,13 @@
  * Suporta dois modos:
  *   NORMAL:       avalia todos os colegas da turma (trava após submissão)
  *   COMPLEMENTAR: avalia apenas o(s) aluno(s) de janelas abertas (não trava submissão normal)
+ *
+ * IMPORTANTE: useSearchParams() exige <Suspense> no Next.js 13+.
+ * O componente real está em AlunoAvaliarContent; a exportação default
+ * envolve tudo em Suspense para satisfazer o requisito do framework.
  */
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { TopBar }     from '@/components/ui/TopBar'
@@ -45,7 +49,8 @@ function DropdownNota({
   )
 }
 
-export default function AlunoAvaliarPage() {
+// ── Componente interno (usa useSearchParams — precisa de Suspense) ─────────
+function AlunoAvaliarContent() {
   const { data: session } = useSession()
   const params    = useSearchParams()
   const router    = useRouter()
@@ -429,5 +434,14 @@ export default function AlunoAvaliarPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+// ── Export default com Suspense (obrigatório pelo Next.js para useSearchParams) ──
+export default function AlunoAvaliarPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-400">Carregando...</div>}>
+      <AlunoAvaliarContent />
+    </Suspense>
   )
 }
