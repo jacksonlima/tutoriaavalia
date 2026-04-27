@@ -16,17 +16,11 @@ export default async function ProfessorDashboard() {
   // Barreira de Segurança
   if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
-  // O Prisma executará estas buscas diretamente na Vercel (Server Side)
-  const include = {
-    problemas: {
-      orderBy: { numero: 'asc' },
-      include: {
-        // Conta avaliações por problema — usado para bloquear exclusão do módulo
-        _count: { select: { avaliacoesTutor: true, avaliacoesAluno: true } },
-      },
-    },
-    _count: { select: { matriculas: true } },
-  } as const
+  // ✅ Include simples — sem _count nos problemas
+const include = {
+  problemas: { orderBy: { numero: 'asc' } },
+  _count: { select: { matriculas: true } },
+} as const
 
   // 1. Módulos onde é titular
   const modulosTitular = await prisma.modulo.findMany({
@@ -36,7 +30,7 @@ export default async function ProfessorDashboard() {
   })
 
   // 2. Módulos onde é co-tutor (substituto)
-  const coTutorEm = await prisma.coTutor.findMany({
+  const coTutorEm = await prisma.coTutorPermissao.findMany({
     where:   { tutorId: session?.user?.id },
     include: {
       modulo: {
