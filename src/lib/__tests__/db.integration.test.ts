@@ -32,11 +32,11 @@ beforeEach(async () => {
 async function limpar() {
   await prisma.notificacao.deleteMany()
   await prisma.submissao.deleteMany()
+  await prisma.janelaComplementar.deleteMany()
   await prisma.avaliacaoAluno.deleteMany()
   await prisma.avaliacaoTutor.deleteMany()
   await prisma.situacaoExcepcional.deleteMany()
   await prisma.coTutorPermissao.deleteMany()
-  await prisma.coTutor.deleteMany()
   await prisma.matricula.deleteMany()
   await prisma.problema.deleteMany()
   await prisma.modulo.deleteMany()
