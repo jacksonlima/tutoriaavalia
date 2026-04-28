@@ -43,6 +43,7 @@ model Usuario {
   coTutorPerms         CoTutorPermissao[]
   janelasComoAluno     JanelaComplementar[] @relation("AlunoJanelaComplementar")
   janelasComoProfessor JanelaComplementar[] @relation("ProfessorJanelaComplementar")
+  situacoesExcepcionais SituacaoExcepcional[] @relation("AlunoSituacoes")
 
   @@map("usuarios")
 }
@@ -65,6 +66,7 @@ model Modulo {
   problemas    Problema[]
   coTutores    CoTutorPermissao[]
   notificacoes Notificacao[]
+  situacoesExcepcionais SituacaoExcepcional[] @relation("ModuloSituacoes")
 
   @@unique([ano, tutoria, turma, tutorId])
   @@map("modulos")
@@ -95,14 +97,13 @@ model Problema {
   fechamentoAAtivo Boolean @default(false) @map("fechamento_a_ativo")
   fechamentoBAtivo Boolean @default(false) @map("fechamento_b_ativo")
 
-  modulo               Modulo               @relation(fields: [moduloId], references: [id])
-  avaliacoesTutor      AvaliacaoTutor[]
-  avaliacoesAluno      AvaliacaoAluno[]
-  submissoes           Submissao[]
-  coTutorPerms         CoTutorPermissao[]
-  situacoesExcepcionaisOrigem  SituacaoExcepcional[] @relation("SituacoesExcepcionaisOrigem")
-  situacoesExcepcionaisDestino SituacaoExcepcional[] @relation("SituacoesExcepcionaisDestino")
+  modulo                       Modulo               @relation(fields: [moduloId], references: [id])
+  avaliacoesTutor              AvaliacaoTutor[]
+  avaliacoesAluno              AvaliacaoAluno[]
+  submissoes                   Submissao[]
+  coTutorPerms                 CoTutorPermissao[]
   janelasComplementares        JanelaComplementar[]
+  situacoesExcepcionaisDestino SituacaoExcepcional[] @relation("SituacoesDestino")
 
   @@unique([moduloId, numero])
   @@map("problemas")
@@ -147,7 +148,7 @@ model AvaliacaoAluno {
 
   problema  Problema @relation(fields: [problemaId], references: [id])
   avaliador Usuario  @relation("Avaliador", fields: [avaliadorId], references: [id])
-  avaliado  Usuario  @relation("Avaliado", fields: [avaliadoId], references: [id])
+  avaliado  Usuario  @relation("Avaliado",  fields: [avaliadoId],  references: [id])
 
   @@unique([problemaId, avaliadorId, avaliadoId, tipoEncontro])
   @@map("avaliacoes_aluno")
@@ -170,14 +171,14 @@ model Submissao {
 }
 
 model CoTutorPermissao {
-  id         String   @id @default(uuid())
-  moduloId   String   @map("modulo_id")
-  tutorId    String   @map("tutor_id")
-  problemaId String?  @map("problema_id")
-  criadoEm  DateTime @default(now()) @map("criado_em")
+  id         String    @id @default(uuid())
+  moduloId   String    @map("modulo_id")
+  tutorId    String    @map("tutor_id")
+  problemaId String?   @map("problema_id")
+  criadoEm  DateTime  @default(now()) @map("criado_em")
 
-  modulo   Modulo    @relation(fields: [moduloId], references: [id])
-  tutor    Usuario   @relation(fields: [tutorId], references: [id])
+  modulo   Modulo    @relation(fields: [moduloId],   references: [id])
+  tutor    Usuario   @relation(fields: [tutorId],    references: [id])
   problema Problema? @relation(fields: [problemaId], references: [id])
 
   @@unique([moduloId, tutorId, problemaId])
@@ -196,22 +197,25 @@ model Notificacao {
   lidaEm   DateTime? @map("lida_em")
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
-  modulo  Modulo? @relation(fields: [moduloId], references: [id])
+  modulo  Modulo? @relation(fields: [moduloId],  references: [id])
 
   @@map("notificacoes")
 }
 
 model SituacaoExcepcional {
   id                String       @id @default(uuid())
-  problemaOrigemId  String       @map("problema_origem_id")
+  alunoId           String       @map("aluno_id")
+  moduloOrigemId    String       @map("modulo_origem_id")
   problemaDestinoId String       @map("problema_destino_id")
   tipoEncontro      TipoEncontro @map("tipo_encontro")
-  motivo            String?
+  observacao        String?
   criadoEm         DateTime     @default(now()) @map("criado_em")
 
-  problemaOrigem  Problema @relation("SituacoesExcepcionaisOrigem",  fields: [problemaOrigemId],  references: [id])
-  problemaDestino Problema @relation("SituacoesExcepcionaisDestino", fields: [problemaDestinoId], references: [id])
+  aluno           Usuario  @relation("AlunoSituacoes",  fields: [alunoId],          references: [id], onDelete: Cascade)
+  moduloOrigem    Modulo   @relation("ModuloSituacoes", fields: [moduloOrigemId],    references: [id], onDelete: Cascade)
+  problemaDestino Problema @relation("SituacoesDestino", fields: [problemaDestinoId], references: [id])
 
+  @@unique([alunoId, moduloOrigemId, tipoEncontro])
   @@map("situacoes_excepcionais")
 }
 
@@ -225,7 +229,7 @@ model JanelaComplementar {
   criadaEm    DateTime     @default(now()) @map("criada_em")
   fechadaEm   DateTime?    @map("fechada_em")
 
-  problema  Problema @relation(fields: [problemaId], references: [id], onDelete: Cascade)
+  problema  Problema @relation(fields: [problemaId],  references: [id], onDelete: Cascade)
   aluno     Usuario  @relation("AlunoJanelaComplementar",     fields: [alunoId],     references: [id], onDelete: Cascade)
   criadaPor Usuario  @relation("ProfessorJanelaComplementar", fields: [criadaPorId], references: [id])
 

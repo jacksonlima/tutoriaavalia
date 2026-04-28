@@ -1,11 +1,12 @@
-import { auth } from '@/lib/auth'
+import { auth }              from '@/lib/auth'
 import { avaliacaoTutorSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
 
-// Verifica se userId pode avaliar aquele problema/encontro:
-// - Titular do módulo: acesso total
-// - Co-tutor: acesso apenas às permissões definidas pelo titular
+// ── Verifica se userId pode avaliar aquele problema/encontro ──────────────────
+// Titular do módulo: acesso total
+// Co-tutor: verifica CoTutorPermissao (registro com problemaId=null = módulo inteiro)
 async function podeAvaliar(
   prisma: any,
   problemaId: string,
@@ -14,48 +15,39 @@ async function podeAvaliar(
 ): Promise<boolean> {
   const problema = await prisma.problema.findUnique({
     where:   { id: problemaId },
-    include: {
-      modulo: {
-        include: {
-          coTutores: {
-            where:   { tutorId: userId },
-            include: { permissoes: true },
-          },
-        },
-      },
-    },
+    include: { modulo: true },
   })
   if (!problema) return false
+
   // Titular tem acesso total
   if (problema.modulo.tutorId === userId) return true
-  // Co-tutor: verifica permissão específica
-  const ct = problema.modulo.coTutores[0]
-  if (!ct) return false
-  return ct.permissoes.some(
-    (p: any) => p.problemaId === problemaId && p.tipoEncontro === tipoEncontro
-  )
+
+  // Co-tutor: verifica CoTutorPermissao
+  const permissao = await prisma.coTutorPermissao.findFirst({
+    where: {
+      tutorId:  userId,
+      moduloId: problema.modulo.id,
+      OR: [
+        { problemaId: null },        // permissão geral no módulo
+        { problemaId: problemaId },  // permissão específica neste problema
+      ],
+    },
+  })
+  return !!permissao
 }
 
-// Compatibilidade com toggle de encontro (sem tipoEncontro específico)
+// Compatibilidade: verifica apenas se é tutor ou co-tutor (sem tipoEncontro)
 async function isTutorOuCoTutor(
   prisma: any,
   problemaId: string,
   userId: string
 ): Promise<boolean> {
-  const problema = await prisma.problema.findUnique({
-    where:   { id: problemaId },
-    include: { modulo: { include: { coTutores: { where: { tutorId: userId } } } } },
-  })
-  if (!problema) return false
-  if (problema.modulo.tutorId === userId) return true
-  return problema.modulo.coTutores.length > 0
+  return podeAvaliar(prisma, problemaId, 'ABERTURA', userId)
 }
 
-
-export const dynamic = 'force-dynamic'
-
-// POST /api/avaliacoes/tutor
-// Salva (rascunho) ou finaliza as notas do tutor para um problema/encontro
+// ── POST /api/avaliacoes/tutor ────────────────────────────────────────────────
+// Salva (rascunho) as notas do tutor para um problema/encontro.
+// O professor pode salvar e sobrescrever quantas vezes quiser.
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -63,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }
 
-  const body = await req.json()
+  const body   = await req.json()
   const result = avaliacaoTutorSchema.safeParse(body)
   if (!result.success) {
     return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
@@ -71,21 +63,18 @@ export async function POST(req: NextRequest) {
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
 
-  // Verifica permissão granular (titular = tudo, co-tutor = só o que foi autorizado)
-  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id)
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id!)
   if (!autorizado) {
     return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }
 
-  // Upsert de cada avaliação: professor pode salvar e sobrescrever quantas vezes quiser.
-  // O campo 'finalizado' é mantido como false — não usamos mais travamento do lado do tutor.
   const saved = await prisma.$transaction(
     avaliacoes.map((av) =>
       prisma.avaliacaoTutor.upsert({
         where: {
           problemaId_avaliadoId_tipoEncontro: {
             problemaId,
-            avaliadoId: av.avaliadoId,
+            avaliadoId:   av.avaliadoId,
             tipoEncontro,
           },
         },
@@ -96,12 +85,11 @@ export async function POST(req: NextRequest) {
           atitudes:          av.atitudes,
           ativCompensatoria: av.ativCompensatoria,
           faltou:            av.faltou ?? false,
-          // finalizado NÃO é atualizado aqui — não há mais travamento do tutor
         },
         create: {
           problemaId,
           avaliadoId:        av.avaliadoId,
-          tutorId:           session?.user?.id,
+          tutorId:           session?.user?.id!,
           tipoEncontro,
           c1:                av.c1,
           c2:                av.c2,
@@ -109,7 +97,7 @@ export async function POST(req: NextRequest) {
           atitudes:          av.atitudes,
           ativCompensatoria: av.ativCompensatoria,
           faltou:            av.faltou ?? false,
-          finalizado:        false, // sempre false — professor pode sempre editar
+          finalizado:        false,
         },
       })
     )
@@ -118,7 +106,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ saved: saved.length })
 }
 
-// GET /api/avaliacoes/tutor?problemaId=X&tipoEncontro=ABERTURA
+// ── GET /api/avaliacoes/tutor?problemaId=X&tipoEncontro=ABERTURA ──────────────
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -127,21 +115,20 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const problemaId = searchParams.get('problemaId')
+  const problemaId   = searchParams.get('problemaId')
   const tipoEncontro = searchParams.get('tipoEncontro') as 'ABERTURA' | 'FECHAMENTO' | null
 
   if (!problemaId || !tipoEncontro) {
     return NextResponse.json({ error: 'problemaId e tipoEncontro são obrigatórios' }, { status: 400 })
   }
 
-  // Verifica permissão granular
-  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id)
+  const autorizado = await podeAvaliar(prisma, problemaId, tipoEncontro, session?.user?.id!)
   if (!autorizado) {
     return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
   }
 
   const avaliacoes = await prisma.avaliacaoTutor.findMany({
-    where: { problemaId, tipoEncontro },
+    where:   { problemaId, tipoEncontro },
     include: { avaliado: { select: { id: true, nome: true } } },
     orderBy: { avaliado: { nome: 'asc' } },
   })
