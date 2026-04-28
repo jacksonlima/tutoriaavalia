@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { TopBar } from '@/components/ui/TopBar'
 import { useToast } from '@/components/ui/use-toast'
 import { getCriterios, getLabelTipo, OPCOES_ATITUDES, TipoEncontroForm, Criterio, CampoNota } from '@/lib/criterios'
+import { JanelaComplementarManager } from '@/components/professor/JanelaComplementarManager'
 
 import { salvarAvaliacoesTutor } from './actions'
 
@@ -121,6 +122,33 @@ function AvaliarTutorPageInner() {
       })
   }, [problemaId, tipo])
 
+  // Recarrega alunos após abrir janela (novo aluno pode ter sido matriculado)
+  const handleJanelaAtualizada = async () => {
+    if (!problemaId) return
+    const modulos: any[] = await fetch('/api/modulos').then((r) => r.json())
+    for (const m of modulos) {
+      const prob = m.problemas?.find((p: any) => p.id === problemaId)
+      if (prob) {
+        const alunosDoModulo: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
+        setAlunos((prev) => {
+          const existentesIds = new Set(prev.map((a) => a.id))
+          const novos = alunosDoModulo.filter((a) => !existentesIds.has(a.id))
+          if (novos.length === 0) return prev
+          // Adiciona nota zerada para novos alunos
+          setNotas((n) => {
+            const copy = { ...n }
+            for (const a of novos) {
+              copy[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false, faltou: false }
+            }
+            return copy
+          })
+          return [...prev, ...novos]
+        })
+        break
+      }
+    }
+  }
+
   const setNota = (alunoId: string, campo: CampoNota | 'ativCompensatoria' | 'faltou', valor: number | boolean) => {
     setNotas((prev) => ({ ...prev, [alunoId]: { ...prev[alunoId], [campo]: valor } }))
   }
@@ -160,12 +188,23 @@ function AvaliarTutorPageInner() {
           <h1 className="text-xl font-bold text-[#1F4E79]">
             {problemaNome || 'Avaliação'} — {labelTipo}
           </h1>
-
         </div>
 
-        <div className="space-y-4 md:hidden">
+        {/* ── Janela de Avaliação Complementar (aluno tardio) ─────────────── */}
+        {problemaId && (
+          <JanelaComplementarManager
+            problemaId={problemaId}
+            tipoEncontro={tipo}
+            nomeProblema={problemaNome || 'Problema'}
+            labelTipo={labelTipo}
+            onJanelaAtualizada={handleJanelaAtualizada}
+          />
+        )}
+
+        {/* ── Tabela mobile ──────────────────────────────────────────────── */}
+        <div className="space-y-4 md:hidden mt-4">
           {alunos.map((aluno, idx) => {
-            const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false }
+            const n = notas[aluno.id] ?? { avaliadoId: aluno.id, c1: 0, c2: 0, c3: 0, atitudes: 0, ativCompensatoria: false, faltou: false }
             return (
               <div key={aluno.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -233,7 +272,8 @@ function AvaliarTutorPageInner() {
           })}
         </div>
 
-        <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* ── Tabela desktop ─────────────────────────────────────────────── */}
+        <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden mt-4">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-[#1F4E79] text-white">

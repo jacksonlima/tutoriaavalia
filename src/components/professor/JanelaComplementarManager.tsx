@@ -29,10 +29,11 @@ type Progresso = {
 }
 
 interface Props {
-  problemaId:   string
-  tipoEncontro: string
-  nomeProblema: string
-  labelTipo:    string
+  problemaId:         string
+  tipoEncontro:       string
+  nomeProblema:       string
+  labelTipo:          string
+  onJanelaAtualizada?: () => void  // callback para recarregar lista de alunos
 }
 
 export function JanelaComplementarManager({
@@ -40,6 +41,7 @@ export function JanelaComplementarManager({
   tipoEncontro,
   nomeProblema,
   labelTipo,
+  onJanelaAtualizada,
 }: Props) {
   const { toast } = useToast()
 
@@ -116,6 +118,7 @@ export function JanelaComplementarManager({
       setAlunoSelecionado(null)
       setResultados([])
       await carregarJanelas()
+      onJanelaAtualizada?.()  // avisa a página para recarregar lista de alunos
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
     } finally {
