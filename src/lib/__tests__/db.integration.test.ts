@@ -199,7 +199,8 @@ describe('Notificação', () => {
 
     const notif = await prisma.notificacao.create({
       data: {
-        tutorId:  tutor.id,
+        usuarioId: tutor.id,
+        tipo:      'SUBMISSAO',
         titulo:   'Nova submissão',
         mensagem: 'Um aluno enviou sua avaliação',
         lida:     false,
