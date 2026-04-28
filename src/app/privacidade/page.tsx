@@ -162,7 +162,7 @@ export default function PoliticaPrivacidade() {
                 <span className="text-blue-500 font-bold mt-0.5">→</span>
                 <span>
                   <strong>Neon (banco de dados):</strong> os dados são armazenados em
-                  servidores na região us-east-1 (EUA) com criptografia em repouso e em trânsito.
+                  servidores na região AWS South America East 1 (São Paulo) com criptografia em repouso e em trânsito.
                   O Neon assina cláusulas contratuais padrão de proteção de dados.
                 </span>
               </li>
