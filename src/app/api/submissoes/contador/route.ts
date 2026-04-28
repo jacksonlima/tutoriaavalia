@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       where:   { id: moduloId, tutorId: session?.user?.id },
       select:  { id: true },
     }),
-    prisma.coTutor.findFirst({
+    prisma.coTutorPermissao.findFirst({
       where:  { moduloId, tutorId: session?.user?.id },
       select: { id: true },
     }),
