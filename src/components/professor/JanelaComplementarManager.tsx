@@ -79,14 +79,23 @@ export function JanelaComplementarManager({
   }, [carregarJanelas])
 
   // ── Busca de alunos ───────────────────────────────────────────────────────
+  // A API /api/usuarios/buscar retorna um array direto: [{ id, nome, email }]
   useEffect(() => {
     if (busca.length < 2) { setResultados([]); return }
 
     const timer = setTimeout(async () => {
       setBuscando(true)
       try {
-        const res = await fetch(`/api/usuarios/buscar?q=${encodeURIComponent(busca)}&papel=ALUNO`)
-        if (res.ok) setResultados((await res.json()).usuarios ?? [])
+        const res = await fetch(
+          `/api/usuarios/buscar?q=${encodeURIComponent(busca)}`,
+        )
+        if (res.ok) {
+          const data = await res.json()
+          // API retorna array direto (não { usuarios: [] })
+          setResultados(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        console.error('Erro na busca de alunos:', err)
       } finally {
         setBuscando(false)
       }
