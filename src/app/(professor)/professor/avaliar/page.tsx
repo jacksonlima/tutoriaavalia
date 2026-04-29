@@ -223,7 +223,7 @@ function AvaliarTutorPageInner() {
                         <input type="checkbox" checked={n.ativCompensatoria}
                           onChange={(e) => setNota(aluno.id, 'ativCompensatoria', e.target.checked)}
                           className="w-4 h-4" />
-                        Comp.
+                        Ativ. Comp. Satisfatória?
                       </label>
                     )}
                   </div>
@@ -290,7 +290,7 @@ function AvaliarTutorPageInner() {
                     <div className="text-blue-200 text-xs font-normal">(0–1)</div>
                   </th>
                   <th className="px-3 py-3 font-medium text-center text-red-300">Faltou</th>
-                  <th className="px-3 py-3 font-medium text-center">Comp.</th>
+                  <th className="px-3 py-3 font-medium text-center min-w-[140px]">Ativ. Comp. Satisfatória?</th>
                   <th className="px-3 py-3 font-medium text-center">M−At</th>
                 </tr>
               </thead>
