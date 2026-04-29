@@ -13,7 +13,7 @@ export async function GET() {
 
   if (session?.user?.papel === 'TUTOR') {
     // Módulos onde é titular OU co-tutor
-    const coTutorLinks = await prisma.coTutor.findMany({
+    const coTutorLinks = await prisma.coTutorPermissao.findMany({
       where:  { tutorId: session?.user?.id },
       select: { moduloId: true },
     })
