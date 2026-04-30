@@ -383,10 +383,10 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border overflow-hidden ${!isTitular ? 'border-amber-300' : 'border-gray-200'}`}>
+    <div className={`bg-white rounded-xl border ${!isTitular ? 'border-amber-300' : 'border-gray-200'}`}>
 
       {!isTitular && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center gap-2">
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center gap-2 rounded-t-xl">
           <span className="text-xs font-medium text-amber-700">🔄 Substituto</span>
           {modulo.tutor && (
             <span className="text-xs text-amber-600">— Módulo de {modulo.tutor.nome}</span>
@@ -803,7 +803,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
 
       {/* Modal de confirmação */}
       {confirmando && (
-        <div className="border-t border-gray-100 bg-gray-50 p-4">
+        <div className="border-t border-gray-100 bg-gray-50 p-4 rounded-b-xl">
           {confirmando === 'arquivar' ? (
             <>
               <p className="text-sm font-semibold text-amber-700 mb-1">Arquivar este módulo?</p>
