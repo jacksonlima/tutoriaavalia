@@ -159,8 +159,9 @@ function AlunoAvaliarContent() {
     }
   }
 
+  const toNum = (v: any) => Number(v ?? 0)
   const calcMAt = (n: NotaAluno) =>
-    ((n.c1 + n.c2 + n.c3) / 3 - n.atitudes).toFixed(2)
+    ((toNum(n.c1) + toNum(n.c2) + toNum(n.c3)) / 3 - toNum(n.atitudes)).toFixed(2)
 
   const alunoAtual = alunos[cardAtual]
   const notaAtual  = alunoAtual ? notas[alunoAtual.id] : null
@@ -230,7 +231,7 @@ function AlunoAvaliarContent() {
                           {' '}— {c.nome.length > 50 ? c.nome.substring(0, 50) + '...' : c.nome}
                         </span>
                         <span className="font-bold text-gray-800 ml-2 shrink-0">
-                          {(n[c.campo] as number).toFixed(1)}
+                          {Number(n[c.campo] ?? 0).toFixed(1)}
                         </span>
                       </div>
                     ))}
@@ -238,7 +239,7 @@ function AlunoAvaliarContent() {
                       <span className="text-gray-500">
                         <span className="font-semibold text-[#1F4E79]">Atitudes</span>
                       </span>
-                      <span className="font-bold text-gray-800 ml-2">{n.atitudes.toFixed(1)}</span>
+                      <span className="font-bold text-gray-800 ml-2">{Number(n.atitudes ?? 0).toFixed(1)}</span>
                     </div>
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
@@ -360,11 +361,11 @@ function AlunoAvaliarContent() {
                       <p className="text-sm text-gray-700 mt-1 leading-snug">{c.nome}</p>
                     </div>
                     <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
-                      {(notaAtual[c.campo] as number).toFixed(1)}
+                      {Number(notaAtual[c.campo] ?? 0).toFixed(1)}
                     </span>
                   </div>
                   <DropdownNota
-                    valor={notaAtual[c.campo] as number}
+                    valor={Number(notaAtual[c.campo] ?? 0)}
                     opcoes={c.opcoes}
                     onChange={(v) => setNota(alunoAtual.id, c.campo, v)}
                   />
@@ -380,11 +381,11 @@ function AlunoAvaliarContent() {
                     <p className="text-sm text-gray-700 mt-1">Avalie as atitudes durante o encontro</p>
                   </div>
                   <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
-                    {notaAtual.atitudes.toFixed(1)}
+                    {Number(notaAtual.atitudes ?? 0).toFixed(1)}
                   </span>
                 </div>
                 <DropdownNota
-                  valor={notaAtual.atitudes}
+                  valor={Number(notaAtual.atitudes ?? 0)}
                   opcoes={OPCOES_ATITUDES}
                   onChange={(v) => setNota(alunoAtual.id, 'atitudes', v)}
                 />
@@ -392,7 +393,7 @@ function AlunoAvaliarContent() {
             </div>
 
             <div className="mt-4 bg-[#1F4E79] text-white rounded-xl p-3 text-center text-sm">
-              M = {((notaAtual.c1 + notaAtual.c2 + notaAtual.c3) / 3).toFixed(2)}
+              M = {((toNum(notaAtual.c1) + toNum(notaAtual.c2) + toNum(notaAtual.c3)) / 3).toFixed(2)}
               <span className="mx-3 opacity-40">|</span>
               M−At = <span className="font-bold">{calcMAt(notaAtual)}</span>
             </div>
