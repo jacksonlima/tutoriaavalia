@@ -2,19 +2,17 @@
  * TutoriaAvalia v2 — API: Avaliações do Aluno (interpares + auto-avaliação)
  * Autor: Jackson Lima — CESUPA
  *
- * POST /api/avaliacoes/aluno
- *   Salva as avaliações E trava definitivamente (imutável após submissão).
+ * REGRA DE JANELA COMPLEMENTAR:
  *
- *   REGRA DE JANELA COMPLEMENTAR:
- *   Se existe uma JanelaComplementar aberta para este problema/encontro,
- *   o aluno só pode avaliar o aluno-alvo da janela — não pode modificar
- *   avaliações já submetidas para outros colegas.
+ *   Quando uma JanelaComplementar está aberta para aluno X:
  *
- * GET /api/avaliacoes/aluno?problemaId=X&tipoEncontro=Y
- *   Retorna avaliações do aluno logado + status de janelas abertas.
+ *   • Outros alunos → modo COMPLEMENTAR: só podem avaliar X (não alteram notas já enviadas)
+ *   • Aluno X (tardio) → modo NORMAL: vê todos os colegas, submete normalmente
+ *
+ *   O aluno tardio nunca entra em modo complementar — ele é o alvo, não o avaliador restrito.
  */
 
-import { auth }         from '@/lib/auth'
+import { auth }               from '@/lib/auth'
 import { avaliacaoAlunoSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -36,8 +34,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
+  const userId = session?.user?.id!
 
-  // Verifica se o encontro existe e está ativo
   const problema = await prisma.problema.findUnique({ where: { id: problemaId } })
   if (!problema) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
@@ -51,18 +49,22 @@ export async function POST(req: NextRequest) {
   }
   const encontroAtivo = campoAtivo[tipoEncontro] ?? false
 
-  // ── JANELAS COMPLEMENTARES ────────────────────────────────────────────────
-  // Verifica se há alguma janela aberta para este encontro.
+  // ── Janelas abertas para este problema/encontro ───────────────────────────
   const janelasAbertas = await prisma.janelaComplementar.findMany({
-    where: { problemaId, tipoEncontro: tipoEncontro as any, aberta: true },
+    where:  { problemaId, tipoEncontro: tipoEncontro as any, aberta: true },
     select: { alunoId: true },
   })
-  const emModoComplementar = janelasAbertas.length > 0
-  const idsJanelasAbertas  = new Set(janelasAbertas.map((j) => j.alunoId))
+
+  const idsJanelasAbertas = new Set(janelasAbertas.map((j) => j.alunoId))
+
+  // O aluno logado É o aluno tardio? Se sim → modo normal (não complementar)
+  // O modo complementar só se aplica a quem está avaliando o tardio, não ao tardio em si
+  const euSouOTardio     = idsJanelasAbertas.has(userId)
+  const emModoComplementar = janelasAbertas.length > 0 && !euSouOTardio
 
   if (emModoComplementar) {
-    // MODO COMPLEMENTAR: só aceita avaliações dos alunos das janelas abertas
-    const idsEnviados = new Set(avaliacoes.map((a) => a.avaliadoId))
+    // Modo complementar: só aceita avaliações do(s) aluno(s) das janelas abertas
+    const idsEnviados        = new Set(avaliacoes.map((a) => a.avaliadoId))
     const avaliadosInvalidos = [...idsEnviados].filter((id) => !idsJanelasAbertas.has(id))
 
     if (avaliadosInvalidos.length > 0) {
@@ -75,12 +77,9 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       )
     }
-
-    // Em modo complementar, o encontro pode estar "fechado" mas a janela sobrepõe
-    // (o professor já avaliou o encontro normal — agora é só o aluno tardio)
-    // Não exige encontroAtivo para processar avaliações complementares.
+    // Em modo complementar o encontro pode estar "fechado" — a janela sobrepõe
   } else {
-    // MODO NORMAL: verifica se o encontro está ativo
+    // Modo normal (titular ou aluno tardio): verifica encontro ativo
     if (!encontroAtivo) {
       return NextResponse.json(
         { error: 'Este encontro ainda não foi aberto pelo professor.' },
@@ -88,12 +87,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Em modo normal, verifica submissão prévia (trava total)
+    // Verifica submissão prévia (trava total — exceto aluno tardio que nunca submeteu)
     const jaSubmeteu = await prisma.submissao.findUnique({
       where: {
         problemaId_avaliadorId_tipoEncontro: {
           problemaId,
-          avaliadorId: session?.user?.id!,
+          avaliadorId:  userId,
           tipoEncontro: tipoEncontro as any,
         },
       },
@@ -106,83 +105,66 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Metadados da requisição ───────────────────────────────────────────────
-  const ipOrigem =
-    req.headers.get('x-forwarded-for') ??
-    req.headers.get('x-real-ip')       ??
-    'desconhecido'
+  const ipOrigem  = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'desconhecido'
   const userAgent = req.headers.get('user-agent') ?? ''
 
-  // ── Transação: salva avaliações + submissão ───────────────────────────────
   await prisma.$transaction(async (tx) => {
     for (const av of avaliacoes) {
       if (emModoComplementar) {
-        // Em modo complementar: usa upsert (permite criar sem ter submetido antes)
+        // Complementar: upsert (permite criar sem ter submetido antes)
         await tx.avaliacaoAluno.upsert({
           where: {
             problemaId_avaliadorId_avaliadoId_tipoEncontro: {
               problemaId,
-              avaliadorId: session?.user?.id!,
-              avaliadoId:  av.avaliadoId,
+              avaliadorId:  userId,
+              avaliadoId:   av.avaliadoId,
               tipoEncontro: tipoEncontro as any,
             },
           },
           create: {
             problemaId,
-            avaliadorId: session?.user?.id!,
-            avaliadoId:  av.avaliadoId,
+            avaliadorId:  userId,
+            avaliadoId:   av.avaliadoId,
             tipoEncontro: tipoEncontro as any,
-            c1:       av.c1,
-            c2:       av.c2,
-            c3:       av.c3,
-            atitudes: av.atitudes,
+            c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
           },
           update: {
-            // Complementar pode ser atualizado enquanto janela estiver aberta
-            c1:       av.c1,
-            c2:       av.c2,
-            c3:       av.c3,
-            atitudes: av.atitudes,
+            c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
           },
         })
       } else {
-        // Modo normal: create (único, imutável)
+        // Normal (inclui aluno tardio): create imutável
         await tx.avaliacaoAluno.create({
           data: {
             problemaId,
-            avaliadorId: session?.user?.id!,
-            avaliadoId:  av.avaliadoId,
+            avaliadorId:  userId,
+            avaliadoId:   av.avaliadoId,
             tipoEncontro: tipoEncontro as any,
-            c1:       av.c1,
-            c2:       av.c2,
-            c3:       av.c3,
-            atitudes: av.atitudes,
+            c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
           },
         })
       }
     }
 
     if (!emModoComplementar) {
-      // Modo normal: registra submissão (trava o formulário para sempre)
+      // Registra submissão (trava) — vale para o aluno tardio também
       await tx.submissao.create({
         data: {
           problemaId,
-          avaliadorId: session?.user?.id!,
+          avaliadorId:  userId,
           tipoEncontro: tipoEncontro as any,
           ipOrigem,
           userAgent,
         },
       })
     }
-    // Em modo complementar NÃO cria Submissao —
-    // isso garante que o aluno ainda possa fazer a avaliação normal
-    // quando o professor reabrir o encontro no futuro.
   })
 
   return NextResponse.json({
     sucesso:          true,
     travado:          !emModoComplementar,
     modoComplementar: emModoComplementar,
+    euSouOTardio,
   })
 }
 
@@ -200,18 +182,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Parâmetros obrigatórios ausentes' }, { status: 400 })
   }
 
+  const userId = session?.user?.id!
+
   const [submetido, avaliacoes, janelasAbertas] = await Promise.all([
     prisma.submissao.findUnique({
       where: {
         problemaId_avaliadorId_tipoEncontro: {
           problemaId,
-          avaliadorId:  session?.user?.id!,
+          avaliadorId:  userId,
           tipoEncontro: tipoEncontro as any,
         },
       },
     }),
     prisma.avaliacaoAluno.findMany({
-      where:   { problemaId, avaliadorId: session?.user?.id!, tipoEncontro: tipoEncontro as any },
+      where:   { problemaId, avaliadorId: userId, tipoEncontro: tipoEncontro as any },
       include: { avaliado: { select: { id: true, nome: true } } },
     }),
     prisma.janelaComplementar.findMany({
@@ -220,10 +204,17 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
+  const idsJanelas   = new Set(janelasAbertas.map((j) => j.alunoId))
+  const euSouOTardio = idsJanelas.has(userId)
+
+  // Aluno tardio recebe modoComplementar=false → página mostra todos os colegas
+  const modoComplementar = janelasAbertas.length > 0 && !euSouOTardio
+
   return NextResponse.json({
     avaliacoes,
     submetido:        !!submetido,
-    janelasAbertas,
-    modoComplementar: janelasAbertas.length > 0,
+    janelasAbertas:   modoComplementar ? janelasAbertas : [], // tardio não recebe janelas
+    modoComplementar,
+    euSouOTardio,
   })
 }

@@ -80,7 +80,10 @@ function AlunoAvaliarContent() {
       fetch('/api/modulos').then((r) => r.json()),
     ]).then(([avalData, modulos]: [any, any[]]) => {
       const janelasAbertas: JanelaInfo[] = avalData.janelasAbertas ?? []
-      const emComplementar = janelasAbertas.length > 0
+      // API já calcula corretamente:
+      // - aluno tardio (euSouOTardio=true) → modoComplementar=false, janelasAbertas=[]
+      // - outros alunos com janela aberta  → modoComplementar=true
+      const emComplementar = avalData.modoComplementar ?? (janelasAbertas.length > 0)
 
       setModoComplementar(emComplementar)
       setJanelasInfo(janelasAbertas)
@@ -101,11 +104,11 @@ function AlunoAvaliarContent() {
           let alunosParaAvaliar: Aluno[]
 
           if (emComplementar) {
-            // MODO COMPLEMENTAR: só mostra os alunos das janelas abertas
+            // MODO COMPLEMENTAR (outros alunos): só mostra os alunos das janelas abertas
             const idsJanelas = new Set(janelasAbertas.map((j) => j.alunoId))
             alunosParaAvaliar = todosAlunos.filter((a) => idsJanelas.has(a.id))
           } else {
-            // MODO NORMAL: todos os alunos, logado primeiro (auto-avaliação)
+            // MODO NORMAL (inclui aluno tardio): todos os alunos, logado primeiro
             const euMesmo = todosAlunos.find((a) => a.id === session?.user?.id)
             const outros  = todosAlunos.filter((a) => a.id !== session?.user?.id)
             alunosParaAvaliar = euMesmo ? [euMesmo, ...outros] : todosAlunos
