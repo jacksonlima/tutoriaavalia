@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/usuarios/buscar?q=texto   — autocomplete alunos no formulário de módulo
-// GET /api/usuarios/buscar?email=x   — busca docente exato para wizard de substituto
+// GET /api/usuarios/buscar?q=texto           → autocomplete alunos (padrão)
+// GET /api/usuarios/buscar?q=texto&papel=TUTOR → autocomplete professores
+// GET /api/usuarios/buscar?email=x           → busca exata por email (qualquer papel)
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url)
 
-  // ── Busca exata por email (wizard de substituto) ─────────────
+  // ── Busca exata por email ─────────────────────────────────────────────────
   const emailExato = url.searchParams.get('email')
   if (emailExato) {
     const usuario = await prisma.usuario.findUnique({
@@ -24,13 +25,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(usuario)
   }
 
-  // ── Autocomplete por texto (formulário de módulo) ─────────────
-  const q = (url.searchParams.get('q') ?? '').trim()
+  // ── Autocomplete por texto ────────────────────────────────────────────────
+  const q     = (url.searchParams.get('q') ?? '').trim()
+  const papel = url.searchParams.get('papel')   // 'ALUNO' | 'TUTOR' | null
+
   if (q.length < 2) return NextResponse.json([])
+
+  // Valida papel se informado
+  const papelFiltro = papel === 'TUTOR' ? 'TUTOR' : 'ALUNO'
 
   const usuarios = await prisma.usuario.findMany({
     where: {
-      papel: 'ALUNO',
+      papel: papelFiltro,
       OR: [
         { nome:  { contains: q, mode: 'insensitive' } },
         { email: { contains: q, mode: 'insensitive' } },

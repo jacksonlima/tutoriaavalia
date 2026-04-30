@@ -65,10 +65,10 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
   if (!modulo) redirect('/professor/dashboard')
 
   if (modulo.tutorId !== session?.user?.id) {
-    const coTutor = await prisma.coTutor.findUnique({
-      where: { moduloId_tutorId: { moduloId, tutorId: session?.user?.id } },
-    })
-    if (!coTutor) redirect('/professor/dashboard')
+    const permissao = await prisma.coTutorPermissao.findFirst({
+        where: { moduloId, tutorId: session?.user?.id },
+        })
+        if (!permissao) redirect('/professor/dashboard')
   }
 
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([

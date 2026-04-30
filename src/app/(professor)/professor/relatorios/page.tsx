@@ -41,10 +41,10 @@ export default async function RelatoriosPage({ searchParams }: Props) {
   if (!modulo) redirect('/professor/dashboard')
   // Permite acesso se for titular ou co-tutor
   if (modulo.tutorId !== session?.user?.id) {
-    const coTutor = await prisma.coTutor.findUnique({
-      where: { moduloId_tutorId: { moduloId, tutorId: session?.user?.id } },
+    const permissao = await prisma.coTutorPermissao.findFirst({
+  where: { moduloId, tutorId: session?.user?.id },
     })
-    if (!coTutor) redirect('/professor/dashboard')
+      if (!permissao) redirect('/professor/dashboard')
   }
 
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
