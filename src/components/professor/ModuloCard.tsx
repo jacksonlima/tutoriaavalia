@@ -501,7 +501,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
 
           {/* ── Gerenciar Substitutos ─────────────────────────────────────────── */}
           {isTitular && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="border border-gray-200 rounded-xl">
               <button
                 type="button"
                 onClick={(e) => {
@@ -509,7 +509,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                   setGerenciando(!gerenciando)
                   if (gerenciando) { limparSelecao(); setPasso('busca') }
                 }}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
+                className={`w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm ${gerenciando ? 'rounded-t-xl' : 'rounded-xl'}`}
               >
                 <span className="font-medium text-gray-700">
                   👥 Substitutos
@@ -654,7 +654,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
 
                         {/* Dropdown de resultados */}
                         {resultadosProf.length > 0 && (
-                          <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                          <div className="absolute z-[9999] w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                             {resultadosProf.map((prof) => (
                               <button
                                 key={prof.id}
