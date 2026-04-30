@@ -88,14 +88,7 @@ function AlunoAvaliarContent() {
       setModoComplementar(emComplementar)
       setJanelasInfo(janelasAbertas)
 
-      if (avalData.submetido && !emComplementar) {
-        // Avaliação normal já submetida (e sem janela complementar aberta)
-        setFase('concluido')
-        setCarregando(false)
-        return
-      }
-
-      // Busca a lista de alunos do módulo
+      // Busca a lista de alunos do módulo (sempre — mesmo se já submeteu, para exibir notas)
       for (const m of modulos) {
         const prob = m.problemas?.find((p: any) => p.id === problemaId)
         if (prob) {
@@ -127,6 +120,12 @@ function AlunoAvaliarContent() {
               : { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
           }
           setNotas(init)
+
+          // Só vai para concluído APÓS carregar as notas (para exibição)
+          if (avalData.submetido && !emComplementar) {
+            setFase('concluido')
+          }
+
           break
         }
       }
@@ -170,24 +169,79 @@ function AlunoAvaliarContent() {
 
   if (carregando) return <div className="p-8 text-center text-gray-400">Carregando...</div>
 
-  // ── CONCLUÍDO ─────────────────────────────────────────────────────────────
+  // ── CONCLUÍDO — mostra notas lançadas em modo somente leitura ───────────
   if (fase === 'concluido') {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
-        <main className="max-w-lg mx-auto px-4 py-12 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h1 className="text-xl font-bold text-gray-800 mb-2">
-            {modoComplementar ? 'Avaliação complementar enviada!' : 'Avaliação enviada!'}
-          </h1>
-          <p className="text-sm text-gray-500 mb-6">
-            {modoComplementar
-              ? 'Você avaliou o colega que chegou tarde. Obrigado!'
-              : 'Suas notas foram registradas e não podem mais ser alteradas.'}
-          </p>
+        <main className="max-w-lg mx-auto px-4 py-6">
+
+          {/* Banner de confirmação */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 text-center">
+            <div className="text-4xl mb-2">✅</div>
+            <h1 className="text-base font-bold text-green-800 mb-1">
+              {modoComplementar ? 'Avaliação complementar enviada!' : 'Avaliação enviada!'}
+            </h1>
+            <p className="text-xs text-green-600">
+              Notas registradas — somente leitura
+            </p>
+          </div>
+
+          {/* Notas lançadas — somente leitura */}
+          {alunos.length > 0 && (
+            <div className="space-y-3 mb-5">
+              {alunos.map((aluno) => {
+                const n = notas[aluno.id]
+                if (!n) return null
+                const eEuMesmo = aluno.id === session?.user?.id
+                return (
+                  <div key={aluno.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="font-semibold text-sm text-gray-800">
+                        {aluno.nome}
+                        {eEuMesmo && (
+                          <span className="ml-2 text-xs text-blue-500">(Você)</span>
+                        )}
+                      </p>
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                        🔒 Enviado
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {criterios.map((c) => (
+                        <div key={c.campo} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">
+                            <span className="font-semibold text-[#1F4E79]">{c.label}</span>
+                            {' '}— {c.nome.length > 40 ? c.nome.substring(0, 40) + '...' : c.nome}
+                          </span>
+                          <span className="font-bold text-gray-800 ml-2 shrink-0">
+                            {Number(n[c.campo] ?? 0).toFixed(1)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">
+                          <span className="font-semibold text-[#1F4E79]">Atitudes</span>
+                        </span>
+                        <span className="font-bold text-gray-800 ml-2">
+                          {Number(n.atitudes ?? 0).toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
+                      M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <button
             onClick={() => router.push('/aluno/dashboard')}
-            className="bg-[#1F4E79] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
+            className="w-full bg-[#1F4E79] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
           >
             Voltar ao início
           </button>
