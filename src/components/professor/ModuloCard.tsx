@@ -443,7 +443,6 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                 )}
               </div>
               <div className="space-y-1.5">
-                {/* Abertura — visível apenas se titular ou co-tutor com permissão */}
                 {temPermissaoEncontro(prob, 'ABERTURA') && (
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
@@ -494,27 +493,28 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                     })}
                   </>
                 ) : (
-                  {/* Fechamento — visível apenas se titular ou co-tutor com permissão */}
-                  {temPermissaoEncontro(prob, 'FECHAMENTO') && (
-                  <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 font-medium">Fechamento</span>
-                      {(() => { const c = getContador(prob.id, 'FECHAMENTO'); return c ? (
-                        <ContadorBadge enviadas={c.enviadas} total={c.total} ativo={c.ativo} />
-                      ) : null })()}
+                  <>
+                    {temPermissaoEncontro(prob, 'FECHAMENTO') && (
+                    <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 font-medium">Fechamento</span>
+                        {(() => { const c = getContador(prob.id, 'FECHAMENTO'); return c ? (
+                          <ContadorBadge enviadas={c.enviadas} total={c.total} ativo={c.ativo} />
+                        ) : null })()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {prob.fechamentoAtivo && (
+                          <Link
+                            href={`/professor/avaliar?problemaId=${prob.id}&tipo=FECHAMENTO&nome=${encodeURIComponent(prob.nome ?? '')}`}
+                            className="text-xs text-blue-600 underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >Avaliar</Link>
+                        )}
+                        <Toggle ativo={prob.fechamentoAtivo} onChange={() => toggleEncontro(prob.id, 'FECHAMENTO', !prob.fechamentoAtivo)} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {prob.fechamentoAtivo && (
-                        <Link
-                          href={`/professor/avaliar?problemaId=${prob.id}&tipo=FECHAMENTO&nome=${encodeURIComponent(prob.nome ?? '')}`}
-                          className="text-xs text-blue-600 underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >Avaliar</Link>
-                      )}
-                      <Toggle ativo={prob.fechamentoAtivo} onChange={() => toggleEncontro(prob.id, 'FECHAMENTO', !prob.fechamentoAtivo)} />
-                    </div>
-                  </div>
-                  )}
+                    )}
+                  </>
                 )}
               </div>
             </div>
