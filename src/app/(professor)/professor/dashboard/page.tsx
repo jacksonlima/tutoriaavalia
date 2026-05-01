@@ -1,55 +1,99 @@
 // src/app/(professor)/professor/dashboard/page.tsx
 
-import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { prisma } from '@/lib/db' // <-- Trazido para o topo de forma global e cacheada
+import { auth }       from '@/lib/auth'
+import { redirect }   from 'next/navigation'
+import Link           from 'next/link'
+import { prisma }     from '@/lib/db'
 import { ModuloCard } from '@/components/professor/ModuloCard'
-import { TopBar } from '@/components/ui/TopBar'
+import { TopBar }     from '@/components/ui/TopBar'
 
-// Força a página a sempre buscar dados novos (nunca exibe cache obsoleto do professor)
 export const dynamic = 'force-dynamic'
 
 export default async function ProfessorDashboard() {
   const session = await auth()
-  
-  // Barreira de Segurança
   if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
-  // ✅ Include simples — sem _count nos problemas
-const include = {
-  problemas: { orderBy: { numero: 'asc' } },
-  _count: { select: { matriculas: true } },
-} as const
+  const userId = session?.user?.id!
 
-  // 1. Módulos onde é titular
+  // Include base para módulos
+  const includeBase = {
+    problemas:   { orderBy: { numero: 'asc' } },
+    _count:      { select: { matriculas: true } },
+  } as const
+
+  // 1. Módulos onde é TITULAR
   const modulosTitular = await prisma.modulo.findMany({
-    where:   { tutorId: session?.user?.id, arquivado: false },
-    include,
+    where:   { tutorId: userId, arquivado: false },
+    include: includeBase,
     orderBy: { criadoEm: 'desc' },
   })
 
-  // 2. Módulos onde é co-tutor (substituto)
-  const coTutorEm = await prisma.coTutorPermissao.findMany({
-    where:   { tutorId: session?.user?.id },
+  // 2. Módulos onde é CO-TUTOR
+  // Busca permissões agrupando por módulo (evita duplicatas)
+  const coTutorPerms = await prisma.coTutorPermissao.findMany({
+    where:   { tutorId: userId },
     include: {
       modulo: {
         include: {
-          ...include,
+          ...includeBase,
           tutor: { select: { nome: true } },
         },
       },
     },
   })
 
-  // Filtra apenas módulos ativos e não arquivados onde é substituto
-  const modulosSubstituto = coTutorEm
-    .map((ct) => ct.modulo)
-    .filter((m) => !m.arquivado)
+  // Deduplica módulos (um co-tutor pode ter N permissões no mesmo módulo)
+  // e constrói mapa de permissões por problema para cada módulo
+  const modulosMap = new Map<string, any>()
+  const permsMap   = new Map<string, Map<string, Set<string>>>()
+  // permsMap: moduloId → Map<problemaId → Set<tipoEncontro>>
+
+  for (const p of coTutorPerms) {
+    const m = p.modulo
+    if (m.arquivado) continue
+
+    if (!modulosMap.has(m.id)) {
+      modulosMap.set(m.id, m)
+      permsMap.set(m.id, new Map())
+    }
+
+    const probMap = permsMap.get(m.id)!
+    if (!probMap.has(p.problemaId)) {
+      probMap.set(p.problemaId, new Set())
+    }
+    probMap.get(p.problemaId)!.add(p.tipoEncontro)
+  }
+
+  // Monta lista de módulos do co-tutor com _permissoesCoTutor em cada problema
+  const modulosSubstituto = [...modulosMap.values()].map((modulo) => {
+    const probMap = permsMap.get(modulo.id) ?? new Map()
+
+    const problemasComPerms = modulo.problemas.map((prob: any) => {
+      const tiposPermitidos = probMap.get(prob.id) ?? new Set()
+      return {
+        ...prob,
+        _permissoesCoTutor: {
+          abertura:    tiposPermitidos.has('ABERTURA'),
+          fechamento:  tiposPermitidos.has('FECHAMENTO'),
+          fechamentoA: tiposPermitidos.has('FECHAMENTO_A'),
+          fechamentoB: tiposPermitidos.has('FECHAMENTO_B'),
+        },
+      }
+    })
+
+    // Filtra só problemas que têm ao menos uma permissão
+    const problemasVisiveis = problemasComPerms.filter((p: any) =>
+      p._permissoesCoTutor.abertura   ||
+      p._permissoesCoTutor.fechamento ||
+      p._permissoesCoTutor.fechamentoA ||
+      p._permissoesCoTutor.fechamentoB
+    )
+
+    return { ...modulo, problemas: problemasVisiveis }
+  })
 
   const totalModulos = modulosTitular.length + modulosSubstituto.length
 
-  // HTML entregue pronto para o celular do usuário, sem telas de "Carregando..." vazias
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBar nome={session?.user?.nome} papel="TUTOR" />
@@ -96,12 +140,12 @@ const include = {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Módulos onde é titular */}
+            {/* Módulos onde é TITULAR */}
             {modulosTitular.map((modulo) => (
-              <ModuloCard key={modulo.id} modulo={modulo} isTitular={true} />
+              <ModuloCard key={modulo.id} modulo={modulo as any} isTitular={true} />
             ))}
 
-            {/* Módulos onde é substituto */}
+            {/* Módulos onde é SUBSTITUTO */}
             {modulosSubstituto.length > 0 && (
               <>
                 {modulosTitular.length > 0 && (
@@ -114,7 +158,6 @@ const include = {
                   </div>
                 )}
                 {modulosSubstituto.map((modulo) => (
-                  // O typescript às vezes chora com tipos complexos retornados pelo Prisma, o 'as any' previne erros de compilação aqui
                   <ModuloCard key={modulo.id} modulo={modulo as any} isTitular={false} />
                 ))}
               </>
