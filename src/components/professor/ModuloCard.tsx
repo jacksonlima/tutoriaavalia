@@ -254,15 +254,14 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
     }
     setSalvando(true)
     try {
-      // API espera tutorId + problemasIds (ids dos problemas com permissão)
-      const problemasIds = [...new Set(permsWizard.map(p => p.problemaId))]
+      // API v2: envia permissoes com {problemaId, tipoEncontro} — granular
       const res  = await fetch('/api/co-tutores', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          moduloId:    modulo.id,
-          tutorId:     profSelecionado.id,
-          problemasIds,
+          moduloId:   modulo.id,
+          tutorId:    profSelecionado.id,
+          permissoes: permsWizard, // [{problemaId, tipoEncontro}]
         }),
       })
       const data = await res.json()
@@ -284,11 +283,11 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   const salvarEdicao = async (tutorId: string) => {
     setSalvando(true)
     try {
-      const problemasIds = [...new Set(permsEdit.map(p => p.problemaId))]
       const res = await fetch('/api/co-tutores', {
-        method:  'POST', // POST com upsert (delete + recreate)
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ moduloId: modulo.id, tutorId, problemasIds }),
+        // Envia permsEdit com {problemaId, tipoEncontro} — granular
+        body:    JSON.stringify({ moduloId: modulo.id, tutorId, permissoes: permsEdit }),
       })
       if (!res.ok) { toast({ title: 'Erro ao salvar', variant: 'destructive' }); return }
       const listaRes  = await fetch(`/api/co-tutores?moduloId=${modulo.id}`)
@@ -570,15 +569,20 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
 
                           {editandoId !== ct.tutorId ? (
                             <div className="px-3 py-2">
-                              <p className="text-xs text-gray-500 font-medium mb-1">Problemas com acesso:</p>
+                              <p className="text-xs text-gray-500 font-medium mb-1">Permissões:</p>
                               <div className="flex flex-wrap gap-1">
-                                {(ct.problemas ?? []).map((p: any) => (
-                                  <span key={p.id} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                                    P{p.numero}{p.nome ? ` — ${p.nome}` : ''}
+                                {(ct.permissoes ?? []).map((p: any) => (
+                                  <span key={`${p.problemaId}|${p.tipoEncontro}`}
+                                    className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                    P{p.problema?.numero ?? '?'} —{' '}
+                                    {p.tipoEncontro === 'ABERTURA'    ? 'Abertura'    :
+                                     p.tipoEncontro === 'FECHAMENTO'  ? 'Fechamento'  :
+                                     p.tipoEncontro === 'FECHAMENTO_A'? 'Fechamento A':
+                                     p.tipoEncontro === 'FECHAMENTO_B'? 'Fechamento B': p.tipoEncontro}
                                   </span>
                                 ))}
-                                {(!ct.problemas || ct.problemas.length === 0) && (
-                                  <span className="text-xs text-gray-400 italic">Acesso geral ao módulo</span>
+                                {(!ct.permissoes || ct.permissoes.length === 0) && (
+                                  <span className="text-xs text-gray-400 italic">Nenhuma permissão</span>
                                 )}
                               </div>
                             </div>

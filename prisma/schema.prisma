@@ -171,17 +171,18 @@ model Submissao {
 }
 
 model CoTutorPermissao {
-  id         String    @id @default(uuid())
-  moduloId   String    @map("modulo_id")
-  tutorId    String    @map("tutor_id")
-  problemaId String?   @map("problema_id")
-  criadoEm  DateTime  @default(now()) @map("criado_em")
+  id           String       @id @default(uuid())
+  moduloId     String       @map("modulo_id")
+  tutorId      String       @map("tutor_id")
+  problemaId   String       @map("problema_id")     // obrigatório — permissão sempre por problema
+  tipoEncontro TipoEncontro @map("tipo_encontro")   // ABERTURA | FECHAMENTO | FECHAMENTO_A | FECHAMENTO_B
+  criadoEm     DateTime     @default(now())          @map("criado_em")
 
-  modulo   Modulo    @relation(fields: [moduloId],   references: [id])
-  tutor    Usuario   @relation(fields: [tutorId],    references: [id])
-  problema Problema? @relation(fields: [problemaId], references: [id])
+  modulo   Modulo   @relation(fields: [moduloId],   references: [id])
+  tutor    Usuario  @relation(fields: [tutorId],    references: [id])
+  problema Problema @relation(fields: [problemaId], references: [id])
 
-  @@unique([moduloId, tutorId, problemaId])
+  @@unique([moduloId, tutorId, problemaId, tipoEncontro])
   @@map("co_tutor_permissoes")
 }
 
