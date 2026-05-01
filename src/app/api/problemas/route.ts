@@ -5,8 +5,11 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/problemas — ativa ou desativa qualquer tipo de encontro
-// Regra de segurança: SOMENTE o tutor TITULAR pode habilitar/desabilitar encontros.
-// Co-tutores têm acesso somente leitura/avaliação — nunca podem controlar o toggle.
+//
+// Regras:
+//   Titular  → pode togglear qualquer encontro de qualquer problema do módulo
+//   Co-tutor → pode togglear APENAS os encontros que lhe foram concedidos em CoTutorPermissao
+//   Outros   → 403
 export async function PATCH(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -22,26 +25,37 @@ export async function PATCH(req: NextRequest) {
 
   const { problemaId, tipoEncontro, ativo } = result.data
 
-  // Busca o problema para verificar o titular do módulo
   const problema = await prisma.problema.findUnique({
     where:   { id: problemaId },
-    include: { modulo: { select: { tutorId: true } } },
+    include: { modulo: { select: { id: true, tutorId: true } } },
   })
 
   if (!problema) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
   }
 
-  // Somente o TITULAR pode habilitar/desabilitar encontros
-  // Co-tutor fica bloqueado aqui mesmo que esteja autenticado como TUTOR
-  if (problema.modulo.tutorId !== session?.user?.id) {
-    return NextResponse.json(
-      { error: 'Somente o tutor titular pode habilitar ou desabilitar encontros.' },
-      { status: 403 },
-    )
+  const userId    = session?.user?.id!
+  const eTitular  = problema.modulo.tutorId === userId
+
+  if (!eTitular) {
+    // Co-tutor: verifica se tem permissão EXATA para este problema + tipoEncontro
+    const permissao = await prisma.coTutorPermissao.findFirst({
+      where: {
+        tutorId:      userId,
+        moduloId:     problema.modulo.id,
+        problemaId:   problemaId,
+        tipoEncontro: tipoEncontro as any,
+      },
+    })
+
+    if (!permissao) {
+      return NextResponse.json(
+        { error: 'Você não tem permissão para controlar este encontro.' },
+        { status: 403 },
+      )
+    }
   }
 
-  // Mapeia tipo de encontro para o campo correto no banco
   const campoAtivo: Record<string, string> = {
     ABERTURA:     'aberturaAtiva',
     FECHAMENTO:   'fechamentoAtivo',

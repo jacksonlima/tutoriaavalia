@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 import { useContadorSubmissoes } from '@/hooks/useContadorSubmissoes'
 
+type PermissoesCoTutor = {
+  abertura:    boolean
+  fechamento:  boolean
+  fechamentoA: boolean
+  fechamentoB: boolean
+}
+
 type Problema = {
   id: string
   numero: number
@@ -16,6 +23,9 @@ type Problema = {
   fechamentoAAtivo: boolean
   fechamentoBAtivo: boolean
   _count?: { avaliacoesTutor: number; avaliacoesAluno: number }
+  // Permissões específicas para co-tutores (vem da API /api/modulos)
+  // null = titular (acesso total)
+  _permissoesCoTutor?: PermissoesCoTutor | null
 }
 
 type CoTutorPermItem = { id: string; problemaId: string; tipoEncontro: string }
@@ -47,6 +57,19 @@ type ModuloCardProps = {
 
 export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
   const [problemas, setProblemas] = useState(modulo.problemas)
+
+  // Helper: verifica se o usuário atual tem permissão para um encontro específico
+  // Titular → sempre true | Co-tutor → verifica _permissoesCoTutor
+  const temPermissaoEncontro = (prob: Problema, tipo: 'ABERTURA' | 'FECHAMENTO' | 'FECHAMENTO_A' | 'FECHAMENTO_B') => {
+    if (isTitular) return true
+    if (!prob._permissoesCoTutor) return false
+    switch (tipo) {
+      case 'ABERTURA':     return prob._permissoesCoTutor.abertura
+      case 'FECHAMENTO':   return prob._permissoesCoTutor.fechamento
+      case 'FECHAMENTO_A': return prob._permissoesCoTutor.fechamentoA
+      case 'FECHAMENTO_B': return prob._permissoesCoTutor.fechamentoB
+    }
+  }
 
   const temAvaliacoes = problemas.some(
     (p) => (p._count?.avaliacoesTutor ?? 0) > 0 || (p._count?.avaliacoesAluno ?? 0) > 0,
@@ -420,6 +443,8 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                 )}
               </div>
               <div className="space-y-1.5">
+                {/* Abertura — visível apenas se titular ou co-tutor com permissão */}
+                {temPermissaoEncontro(prob, 'ABERTURA') && (
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-600 font-medium">Abertura</span>
@@ -438,12 +463,14 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                     <Toggle ativo={prob.aberturaAtiva} onChange={() => toggleEncontro(prob.id, 'ABERTURA', !prob.aberturaAtiva)} />
                   </div>
                 </div>
+                )}
 
                 {prob.temSaltoTriplo ? (
                   <>
                     {(['FECHAMENTO_A', 'FECHAMENTO_B'] as const).map((tipo) => {
                       const ativo = tipo === 'FECHAMENTO_A' ? prob.fechamentoAAtivo : prob.fechamentoBAtivo
                       const label = tipo === 'FECHAMENTO_A' ? 'Fechamento A' : 'Fechamento B'
+                      if (!temPermissaoEncontro(prob, tipo)) return null
                       return (
                         <div key={tipo} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                           <div className="flex items-center gap-2">
@@ -467,6 +494,8 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                     })}
                   </>
                 ) : (
+                  {/* Fechamento — visível apenas se titular ou co-tutor com permissão */}
+                  {temPermissaoEncontro(prob, 'FECHAMENTO') && (
                   <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-600 font-medium">Fechamento</span>
@@ -485,6 +514,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                       <Toggle ativo={prob.fechamentoAtivo} onChange={() => toggleEncontro(prob.id, 'FECHAMENTO', !prob.fechamentoAtivo)} />
                     </div>
                   </div>
+                  )}
                 )}
               </div>
             </div>
