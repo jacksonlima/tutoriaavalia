@@ -126,7 +126,7 @@ export const avaliacaoTutorSchema = z.object({
   problemaId:   z.string().uuid(),
   tipoEncontro: z.enum(TIPOS_ENCONTRO),
   // Valida que o envio possui pelo menos 1 aluno e no máximo 11 (tamanho do grupo PBL)
-  avaliacoes:   z.array(avaliacaoIndividualTutorSchema).min(1).max(11),
+  avaliacoes:   z.array(avaliacaoIndividualTutorSchema).min(1).max(30),
 })
 
 export type AvaliacaoTutorInput = z.infer<typeof avaliacaoTutorSchema>
@@ -143,7 +143,7 @@ const avaliacaoIndividualAlunoSchema = z.object({
 export const avaliacaoAlunoSchema = z.object({
   problemaId:   z.string().uuid(),
   tipoEncontro: z.enum(TIPOS_ENCONTRO),
-  avaliacoes:   z.array(avaliacaoIndividualAlunoSchema).min(1).max(11),
+  avaliacoes:   z.array(avaliacaoIndividualAlunoSchema).min(1).max(30),
 })
 
 export type AvaliacaoAlunoInput = z.infer<typeof avaliacaoAlunoSchema>

@@ -159,7 +159,15 @@ function AvaliarTutorPageInner() {
       const resposta = await salvarAvaliacoesTutor({
         problemaId,
         tipoEncontro: tipo,
-        avaliacoes: Object.values(notas)
+        avaliacoes: Object.values(notas).map((av) => ({
+          avaliadoId:        av.avaliadoId,
+          c1:                Number(av.c1        ?? 0),
+          c2:                Number(av.c2        ?? 0),
+          c3:                Number(av.c3        ?? 0),
+          atitudes:          Number(av.atitudes  ?? 0),
+          ativCompensatoria: Boolean(av.ativCompensatoria),
+          faltou:            Boolean(av.faltou   ?? false),
+        })),
       })
 
       if (!resposta.sucesso) {
