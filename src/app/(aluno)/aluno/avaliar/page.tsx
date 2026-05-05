@@ -8,14 +8,14 @@
  *   NORMAL:            avalia todos os colegas (trava após submissão)
  *   COMPLEMENTAR:      avalia só o(s) aluno(s) da janela aberta
  *   VISITANTE:         aluno SE — avalia grupo destino
- *   TARDIO INCOMPLETO: tardio que submeteu incompleto — vê só os que faltam,
- *                      envia via upsert (sem nova Submissao)
+ *   TARDIO INCOMPLETO: tardio que submeteu incompleto — completa avaliação
  *
  * Prioridade no carregamento:
- *   1. submetido && euSouOTardio && alunosSemAvaliacao > 0  → formulário "completar"
- *   2. submetido (qualquer outro caso)                      → concluído com todos
- *   3. modoComplementar                                     → formulário só janela
- *   4. normal                                               → formulário todos
+ *   0. encontroAtivo=false && !submetido && !modoComplementar → tela de bloqueio (FIND-NEW-02)
+ *   1. submetido && euSouOTardio && alunosSemAvaliacao > 0   → formulário "completar"
+ *   2. submetido (qualquer outro caso)                       → concluído com todos
+ *   3. modoComplementar                                      → formulário só janela
+ *   4. normal                                                → formulário todos
  */
 
 import { Suspense, useEffect, useState } from 'react'
@@ -65,11 +65,10 @@ function AlunoAvaliarContent() {
   const nomeProblem = params.get('nome') ?? ''
 
   const [alunos,            setAlunos]            = useState<Aluno[]>([])
-  // todosAlunos: grupo completo — usado na tela concluído após tardio completar
   const [todosAlunos,       setTodosAlunos]       = useState<Aluno[]>([])
   const [notas,             setNotas]              = useState<Record<string, NotaAluno>>({})
   const [cardAtual,         setCardAtual]          = useState(0)
-  const [fase,              setFase]               = useState<'formulario' | 'revisao' | 'concluido'>('formulario')
+  const [fase,              setFase]               = useState<'formulario' | 'revisao' | 'concluido' | 'inativo'>('formulario')
   const [carregando,        setCarregando]         = useState(true)
   const [enviando,          setEnviando]           = useState(false)
   const [modoComplementar,  setModoComplementar]   = useState(false)
@@ -102,10 +101,9 @@ function AlunoAvaliarContent() {
           setTuroriaDestino(grupoData.moduloDestino.tutoria)
         }
 
-        // Grupo completo ordenado (eu primeiro) — para exibição no concluído
-        const euMesmo        = grupoAlunos.find((a) => a.id === session?.user?.id)
-        const outros         = grupoAlunos.filter((a) => a.id !== session?.user?.id)
-        const grupoOrdenado  = euMesmo ? [euMesmo, ...outros] : grupoAlunos
+        const euMesmo       = grupoAlunos.find((a) => a.id === session?.user?.id)
+        const outros        = grupoAlunos.filter((a) => a.id !== session?.user?.id)
+        const grupoOrdenado = euMesmo ? [euMesmo, ...outros] : grupoAlunos
         setTodosAlunos(grupoOrdenado)
 
         const avalData = await fetch(
@@ -116,17 +114,27 @@ function AlunoAvaliarContent() {
         const emComplementar  = avalData.modoComplementar ?? false
         const euSouOTardio    = avalData.euSouOTardio ?? false
         const jaSubmeteu      = avalData.submetido ?? false
+        const encontroAtivo   = avalData.encontroAtivo ?? false
 
         setModoComplementar(emComplementar)
         setJanelasInfo(janelasAbertas)
+
+        // ── PRIORIDADE 0: FIND-NEW-02 — encontro inativo ──────────────────
+        // Bloqueia renderização do formulário se o encontro não está ativo,
+        // o aluno não submeteu ainda e não há janela complementar aberta.
+        // O backend já bloqueia a submissão com 403 — esta verificação
+        // melhora a experiência e evita exposição prematura do formulário.
+        if (!encontroAtivo && !jaSubmeteu && !emComplementar) {
+          setFase('inativo')
+          setCarregando(false)
+          return
+        }
 
         // ── PRIORIDADE 1: já submeteu ─────────────────────────────────────
         if (jaSubmeteu) {
           const idsJaAvaliados     = new Set((avalData.avaliacoes ?? []).map((av: any) => av.avaliadoId))
           const alunosSemAvaliacao = grupoOrdenado.filter((a) => !idsJaAvaliados.has(a.id))
 
-          // CASO ESPECIAL: tardio com avaliação incompleta
-          // → mostra formulário apenas com os que faltam
           if (euSouOTardio && alunosSemAvaliacao.length > 0) {
             const init: Record<string, NotaAluno> = {}
             for (const a of alunosSemAvaliacao) {
@@ -141,7 +149,6 @@ function AlunoAvaliarContent() {
             return
           }
 
-          // Submeteu e completo → concluído com todos e todas as notas
           const initNotas: Record<string, NotaAluno> = {}
           for (const a of grupoOrdenado) {
             const existente = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
@@ -201,7 +208,6 @@ function AlunoAvaliarContent() {
       })
       if (!res.ok) throw new Error((await res.json()).error)
 
-      // Após envio do tardio incompleto: recarrega todas as notas para exibição
       if (tardioIncompleto) {
         const avalFinal = await fetch(
           `/api/avaliacoes/aluno?problemaId=${problemaEfetivo || problemaId}&tipoEncontro=${tipo}`
@@ -237,6 +243,31 @@ function AlunoAvaliarContent() {
   const progresso  = alunos.length > 0 ? Math.round((cardAtual / alunos.length) * 100) : 0
 
   if (carregando) return <div className="p-8 text-center text-gray-400">Carregando...</div>
+
+  // ── ENCONTRO INATIVO — FIND-NEW-02 ────────────────────────────────────────
+  if (fase === 'inativo') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
+        <main className="max-w-lg mx-auto px-4 py-16 text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h1 className="text-xl font-bold text-gray-700 mb-2">
+            Encontro não disponível
+          </h1>
+          <p className="text-sm text-gray-400 mb-6">
+            Este encontro ainda não foi aberto pelo professor.<br />
+            Aguarde a liberação para avaliar.
+          </p>
+          <button
+            onClick={() => router.push('/aluno/dashboard')}
+            className="bg-[#1F4E79] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
+          >
+            Voltar ao início
+          </button>
+        </main>
+      </div>
+    )
+  }
 
   // ── CONCLUÍDO ─────────────────────────────────────────────────────────────
   if (fase === 'concluido') {
@@ -335,7 +366,7 @@ function AlunoAvaliarContent() {
             <p className="text-sm text-gray-400">{nomeProblem} — {labelTipo}</p>
             {tardioIncompleto && (
               <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
-                🧑‍🎓 Completando avaliação — colegas que ainda não foram avaliados
+                📋 Completando avaliação — colegas que ainda não foram avaliados
               </div>
             )}
             {estaVisitando && (
@@ -426,14 +457,13 @@ function AlunoAvaliarContent() {
       <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
       <main className="max-w-lg mx-auto px-4 py-6">
 
-        {/* Banner tardio incompleto */}
         {tardioIncompleto && (
           <div className="bg-blue-50 border border-blue-300 rounded-xl p-3 mb-4 flex items-start gap-2">
             <span className="text-xl">📋</span>
             <div>
               <p className="text-sm font-bold text-blue-800">Avaliação pendente</p>
               <p className="text-xs text-blue-700">
-                Você ainda não avaliou todos os colegas deste encontro. Avalie os {alunos.length} restante{alunos.length > 1 ? 's' : ''} para concluir.
+                Você ainda não avaliou todos os colegas. Avalie os {alunos.length} restante{alunos.length > 1 ? 's' : ''} para concluir.
               </p>
             </div>
           </div>

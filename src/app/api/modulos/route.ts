@@ -2,10 +2,10 @@
  * TutoriaAvalia v2 — API: Módulos (v2)
  * Autor: Jackson Lima — CESUPA
  *
- * Correção de segurança:
- *   Para co-tutores, cada problema retorna apenas os encontros que ele
- *   tem permissão (via CoTutorPermissao). O frontend usa essa informação
- *   para filtrar o que exibir e o que pode ser toggleado.
+ * Correções de segurança:
+ *   FIND-NEW-01: Resposta para ALUNO filtrada — remove dados estruturais
+ *   desnecessários: UUIDs de problemas não liberados, IDs de matrícula,
+ *   status de sessões futuras e tutorId interno.
  */
 import { auth }              from '@/lib/auth'
 import { criarModuloSchema } from '@/lib/validations'
@@ -19,19 +19,17 @@ export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
+  // ── TUTOR ─────────────────────────────────────────────────────────────────
   if (session?.user?.papel === 'TUTOR') {
     const userId = session?.user?.id!
 
-    // Busca permissões de co-tutor do usuário
     const coTutorPerms = await prisma.coTutorPermissao.findMany({
       where:  { tutorId: userId },
       select: { moduloId: true, problemaId: true, tipoEncontro: true },
     })
 
-    // IDs únicos de módulos onde é co-tutor
     const coTutorModuloIds = [...new Set(coTutorPerms.map((p: any) => p.moduloId))]
 
-    // Monta mapa: moduloId → Set de "problemaId|tipoEncontro"
     const permMap = new Map<string, Set<string>>()
     for (const p of coTutorPerms) {
       if (!permMap.has(p.moduloId)) permMap.set(p.moduloId, new Set())
@@ -58,15 +56,11 @@ export async function GET(req: NextRequest) {
       orderBy: { criadoEm: 'desc' },
     })
 
-    // Para módulos onde é co-tutor: adiciona metadado de permissão por problema
     const modulosComPerms = modulos.map((m: any) => {
       const eTitular = m.tutorId === userId
       if (eTitular) return { ...m, eTitular: true, permissoesCoTutor: null }
 
-      // É co-tutor neste módulo: filtra problemas e marca encontros permitidos
       const permsDoModulo = permMap.get(m.id) ?? new Set()
-
-      // Conjunto de problemaIds que tem ao menos uma permissão
       const problemasPermitidosIds = new Set(
         [...permsDoModulo].map(k => k.split('|')[0])
       )
@@ -75,7 +69,6 @@ export async function GET(req: NextRequest) {
         .filter((p: any) => problemasPermitidosIds.has(p.id))
         .map((p: any) => ({
           ...p,
-          // Marca quais encontros estão liberados para este co-tutor
           _permissoesCoTutor: {
             abertura:    permsDoModulo.has(`${p.id}|ABERTURA`),
             fechamento:  permsDoModulo.has(`${p.id}|FECHAMENTO`),
@@ -95,12 +88,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(modulosComPerms)
   }
 
-  // ── ALUNO ─────────────────────────────────────────────────────────────────
+  // ── ALUNO — FIND-NEW-01: retorna apenas dados necessários ─────────────────
+  // Remove: UUIDs de problemas não liberados, IDs de matrícula,
+  //         status de sessões futuras e tutorId interno.
+  // Mantém: nomes dos colegas (legítimo no PBL), nome do tutor,
+  //         e apenas os problemas com pelo menos um encontro ativo
+  //         (com seus UUIDs — necessários para navegação).
   const matriculas = await prisma.matricula.findMany({
     where: { usuarioId: session?.user?.id },
     include: {
       modulo: {
         include: {
+          // Só o nome do tutor — sem tutorId exposto na resposta
           tutor:      { select: { nome: true } },
           problemas:  { orderBy: { numero: 'asc' } },
           matriculas: {
@@ -112,7 +111,54 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json(matriculas.map((m: any) => m.modulo))
+  const modulosFiltrados = matriculas.map((mat: any) => {
+    const m = mat.modulo
+
+    // Filtra problemas: inclui apenas os que têm pelo menos um encontro ativo
+    // e retorna apenas os campos necessários para o frontend do aluno
+    const problemasAtivos = m.problemas
+      .filter((p: any) =>
+        p.aberturaAtiva ||
+        p.fechamentoAtivo ||
+        p.fechamentoAAtivo ||
+        p.fechamentoBAtivo
+      )
+      .map((p: any) => ({
+        id:               p.id,       // necessário para navegar para /aluno/avaliar
+        numero:           p.numero,
+        nome:             p.nome,
+        temSaltoTriplo:   p.temSaltoTriplo,
+        // Status dos encontros ativos — necessário para o dashboard
+        aberturaAtiva:    p.aberturaAtiva,
+        fechamentoAtivo:  p.fechamentoAtivo,
+        fechamentoAAtivo: p.fechamentoAAtivo,
+        fechamentoBAtivo: p.fechamentoBAtivo,
+        // NÃO inclui: moduloId, criadoEm, atualizadoEm
+      }))
+
+    // Colegas: apenas id e nome (legítimo no contexto PBL presencial)
+    // NÃO inclui: numeraNaTurma, moduloId, usuarioId (IDs de matrícula)
+    const colegas = m.matriculas.map((mc: any) => ({
+      id:   mc.usuario.id,
+      nome: mc.usuario.nome,
+    }))
+
+    return {
+      id:      m.id,
+      nome:    m.nome,
+      ano:     m.ano,
+      tutoria: m.tutoria,
+      turma:   m.turma,
+      // Nome do tutor sem expor tutorId
+      tutor:   { nome: m.tutor.nome },
+      // Apenas problemas com encontros ativos
+      problemas: problemasAtivos,
+      // Colegas sem dados de matrícula
+      matriculas: colegas.map((c: any) => ({ usuario: c })),
+    }
+  })
+
+  return NextResponse.json(modulosFiltrados)
 }
 
 export async function POST(req: NextRequest) {

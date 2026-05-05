@@ -13,7 +13,9 @@
  *   CASO ESPECIAL — TARDIO INCOMPLETO:
  *     → euSouOTardio && jaSubmeteu (submeteu incompleto antes do bug ser corrigido)
  *     → upsert das avaliações que faltam SEM criar nova Submissao
- *     → preserva "uma submissão por aluno" — a Submissao original permanece
+ *
+ *   FIND-NEW-02: GET agora retorna `encontroAtivo` para que o frontend
+ *     possa bloquear a renderização do formulário se o encontro estiver fechado.
  */
 
 import { auth }               from '@/lib/auth'
@@ -53,7 +55,6 @@ export async function POST(req: NextRequest) {
   }
   const encontroAtivo = campoAtivo[tipoEncontro] ?? false
 
-  // ── Janelas abertas ───────────────────────────────────────────────────────
   const janelasAbertas = await prisma.janelaComplementar.findMany({
     where:  { problemaId, tipoEncontro: tipoEncontro as any, aberta: true },
     select: { alunoId: true },
@@ -120,8 +121,6 @@ export async function POST(req: NextRequest) {
   })
 
   // ── CASO ESPECIAL: tardio com submissão incompleta ────────────────────────
-  // Submeteu só consigo mesmo antes do bug ser corrigido.
-  // Permite upsert das avaliações faltantes SEM criar nova Submissao.
   if (jaSubmeteu && euSouOTardio) {
     await prisma.$transaction(async (tx) => {
       for (const av of avaliacoes) {
@@ -140,7 +139,6 @@ export async function POST(req: NextRequest) {
           update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
         })
       }
-      // NÃO cria nova Submissao — a original já garante o registro
     })
 
     return NextResponse.json({
@@ -149,7 +147,6 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // ── Bloqueia submissão duplicada (alunos normais) ─────────────────────────
   if (jaSubmeteu) {
     return NextResponse.json(
       { error: 'Você já enviou esta avaliação. Não é possível alterar após o envio.' },
@@ -157,7 +154,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Primeira submissão normal ─────────────────────────────────────────────
   const ipOrigem  = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'desconhecido'
   const userAgent = req.headers.get('user-agent') ?? ''
 
@@ -201,7 +197,17 @@ export async function GET(req: NextRequest) {
 
   const userId = session?.user?.id!
 
-  const [submetido, avaliacoes, janelasAbertas] = await Promise.all([
+  const [problema, submetido, avaliacoes, janelasAbertas] = await Promise.all([
+    // FIND-NEW-02: busca o problema para verificar se o encontro está ativo
+    prisma.problema.findUnique({
+      where:  { id: problemaId },
+      select: {
+        aberturaAtiva:    true,
+        fechamentoAtivo:  true,
+        fechamentoAAtivo: true,
+        fechamentoBAtivo: true,
+      },
+    }),
     prisma.submissao.findUnique({
       where: {
         problemaId_avaliadorId_tipoEncontro: {
@@ -219,6 +225,15 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
+  // FIND-NEW-02: calcula se o encontro está ativo para este tipoEncontro
+  const campoAtivo: Record<string, boolean> = {
+    ABERTURA:     problema?.aberturaAtiva    ?? false,
+    FECHAMENTO:   problema?.fechamentoAtivo  ?? false,
+    FECHAMENTO_A: problema?.fechamentoAAtivo ?? false,
+    FECHAMENTO_B: problema?.fechamentoBAtivo ?? false,
+  }
+  const encontroAtivo = campoAtivo[tipoEncontro] ?? false
+
   const idsJanelas       = new Set(janelasAbertas.map((j) => j.alunoId))
   const euSouOTardio     = idsJanelas.has(userId)
   const modoComplementar = janelasAbertas.length > 0 && !euSouOTardio
@@ -226,8 +241,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     avaliacoes,
     submetido:      !!submetido,
+    encontroAtivo,  // FIND-NEW-02: frontend usa para bloquear renderização
     janelasAbertas: modoComplementar ? janelasAbertas : [],
     modoComplementar,
-    euSouOTardio,   // ← sempre retornado para a page decidir o fluxo
+    euSouOTardio,
   })
 }
