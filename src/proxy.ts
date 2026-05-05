@@ -12,6 +12,7 @@
  *   2. Não logado → redireciona para /login
  *   3. Logado na página de login → redireciona para o dashboard correto
  *   4. Proteção por papel: ALUNO não acessa /professor e vice-versa
+ *   5. FIND-011: Clear-Site-Data no signout — limpa cookies/storage/cache
  */
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
@@ -20,16 +21,24 @@ export const proxy = auth((req) => {
   const { nextUrl } = req
   const { pathname } = nextUrl
 
+  // ── FIND-011: Clear-Site-Data no logout ────────────────────────
+  // Garante limpeza de cookies, storage e cache do browser após signout
+  if (pathname === '/api/auth/signout') {
+    const res = NextResponse.next()
+    res.headers.set('Clear-Site-Data', '"cookies", "storage", "cache"')
+    return res
+  }
+
   // ── Rotas públicas — nunca bloqueadas ───────────────────────────
   if (
-    pathname.startsWith('/api/')       ||
+    pathname.startsWith('/api/')         ||
     pathname.startsWith('/dev')          ||
     pathname.startsWith('/mobile')       ||
     pathname.startsWith('/_next')        ||
     pathname === '/favicon.ico'          ||
-    pathname === '/privacidade'          ||   // Política de Privacidade — pública
-    pathname === '/direitos'             ||   // Canal de direitos LGPD — público
-    pathname === '/conta/excluir'            // Exclusão de conta — auth verificada internamente
+    pathname === '/privacidade'          ||
+    pathname === '/direitos'             ||
+    pathname === '/conta/excluir'
   ) {
     return NextResponse.next()
   }
