@@ -4,14 +4,14 @@
  * Retorna o grupo efetivo para um encontro, incluindo alunos visitantes
  * realocados via Situação Excepcional.
  *
- * Para ALUNO:
- *   • Visitante (tem SE onde moduloOrigemId = módulo do problema, tipoEncontro igual):
- *     → retorna grupo do módulo DESTINO + co-visitantes
- *     → inclui `estaVisitando: true` e `problemaEfetivoId` (problema onde notas são salvas)
- *   • Regular: retorna alunos do próprio módulo + visitantes recebidos
+ * Para ALUNO — dois caminhos possíveis:
+ *   A) problemaId = DESTINO (link com externo=1):
+ *      O usuário já está em situacoesRecebidas → retorna grupo do destino diretamente
+ *   B) problemaId = ORIGEM (link normal do dashboard):
+ *      Busca SE onde moduloOrigemId = módulo da origem → redireciona para grupo destino
  *
  * Para TUTOR:
- *   • Retorna alunos matriculados + visitantes recebidos (com flag `visitante: true`)
+ *   Retorna matriculados + visitantes recebidos (com flag visitante: true)
  */
 import { auth }                  from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
@@ -61,11 +61,36 @@ export async function GET(req: NextRequest) {
 
   // ─── ALUNO ────────────────────────────────────────────────────────────────
   if (session.user?.papel === 'ALUNO') {
-    // Verifica se este aluno É visitante: tem SE onde originou deste módulo neste tipo de encontro
+
+    // ── CAMINHO A: aluno chegou direto ao problema DESTINO ──────────────────
+    // (dashboard gerou link com o problemaId do destino, e.g. externo=1)
+    // Basta verificar se o userId está na lista de visitantes recebidos aqui
+    const seComoDestinatario = situacoesRecebidas.find((s) => s.alunoId === userId)
+
+    if (seComoDestinatario) {
+      // problemaId JÁ é o destino → problemaEfetivoId = problemaId (sem redirecionamento)
+      const todos = [...alunosRegulares, ...alunosVisitantes]
+      const grupoCompleto = todos.filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i)
+
+      return NextResponse.json({
+        grupo:             grupoCompleto,
+        estaVisitando:     true,
+        estaMatriculado:   false,
+        problemaEfetivoId: problemaId,          // já é o destino correto
+        moduloDestino: {
+          id:      moduloId,
+          nome:    problema.modulo.nome,
+          tutoria: problema.modulo.tutoria,
+        },
+      })
+    }
+
+    // ── CAMINHO B: aluno chegou pelo problema de ORIGEM ─────────────────────
+    // Busca SE onde o aluno originou DESTE módulo para algum destino
     const seVisitante = await prisma.situacaoExcepcional.findFirst({
       where: {
         alunoId:        userId,
-        moduloOrigemId: moduloId,
+        moduloOrigemId: moduloId,               // este módulo É o de origem
         tipoEncontro:   tipoEncontro as any,
       },
       include: {
@@ -84,8 +109,10 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    if (seVisitante) {
-      // É VISITANTE → retorna grupo do módulo destino + co-visitantes + si mesmo
+    // Só aplica SE se o número do problema de origem coincide com o número
+    // do problema destino — assim Abertura P1 não é confundida com Abertura P4
+    if (seVisitante && seVisitante.problemaDestino.numero === problema.numero) {
+      // Encontrou SE de origem → retorna grupo do módulo destino
       const grupoDestino = seVisitante.problemaDestino.modulo.matriculas.map((m) => m.usuario)
 
       const coVisitantes = await prisma.situacaoExcepcional.findMany({
@@ -98,7 +125,6 @@ export async function GET(req: NextRequest) {
       })
       const alunosCoVisitantes = coVisitantes.map((v) => v.aluno)
 
-      // Grupo completo sem duplicatas
       const todos = [
         ...grupoDestino,
         ...alunosCoVisitantes,
@@ -119,7 +145,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // É REGULAR → verifica pertencimento
+    // ── Regular: verifica pertencimento ────────────────────────────────────
     const pertence = alunosRegulares.some((a) => a.id === userId)
     if (!pertence)
       return NextResponse.json({ error: 'Você não pertence a este grupo' }, { status: 403 })
@@ -135,7 +161,7 @@ export async function GET(req: NextRequest) {
       problemaEfetivoId: problemaId,
       visitantes:        alunosVisitantes,
       modulo: {
-        id:      problema.modulo.id,
+        id:      moduloId,
         nome:    problema.modulo.nome,
         tutoria: problema.modulo.tutoria,
       },
@@ -158,18 +184,16 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Sem permissão para este encontro' }, { status: 403 })
     }
 
-    // Grupo = matriculados + visitantes recebidos (sem duplicatas)
     const todos = [...alunosRegulares, ...alunosVisitantes]
     const grupoCompleto = todos.filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i)
 
-    // IDs dos visitantes para marcar visualmente no front
     const visitantesIds = new Set(alunosVisitantes.map((v) => v.id))
 
     return NextResponse.json({
-      grupo:        grupoCompleto.map((a) => ({ ...a, visitante: visitantesIds.has(a.id) })),
-      visitantes:   alunosVisitantes,
+      grupo:      grupoCompleto.map((a) => ({ ...a, visitante: visitantesIds.has(a.id) })),
+      visitantes: alunosVisitantes,
       modulo: {
-        id:      problema.modulo.id,
+        id:      moduloId,
         nome:    problema.modulo.nome,
         tutoria: problema.modulo.tutoria,
       },
