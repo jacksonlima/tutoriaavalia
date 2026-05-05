@@ -1,23 +1,28 @@
 'use client'
 
 /**
- * TutoriaAvalia v2 — Página de Avaliação do Aluno (interpares + auto-avaliação)
+ * TutoriaAvalia v2 — Página de Avaliação do Aluno
  * Autor: Jackson Lima — CESUPA
  *
- * Suporta dois modos:
- *   NORMAL:       avalia todos os colegas da turma (trava após submissão)
- *   COMPLEMENTAR: avalia apenas o(s) aluno(s) de janelas abertas (não trava submissão normal)
+ * Modos:
+ *   NORMAL:            avalia todos os colegas (trava após submissão)
+ *   COMPLEMENTAR:      avalia só o(s) aluno(s) da janela aberta
+ *   VISITANTE:         aluno SE — avalia grupo destino
+ *   TARDIO INCOMPLETO: tardio que submeteu incompleto — vê só os que faltam,
+ *                      envia via upsert (sem nova Submissao)
  *
- * IMPORTANTE: useSearchParams() exige <Suspense> no Next.js 13+.
- * O componente real está em AlunoAvaliarContent; a exportação default
- * envolve tudo em Suspense para satisfazer o requisito do framework.
+ * Prioridade no carregamento:
+ *   1. submetido && euSouOTardio && alunosSemAvaliacao > 0  → formulário "completar"
+ *   2. submetido (qualquer outro caso)                      → concluído com todos
+ *   3. modoComplementar                                     → formulário só janela
+ *   4. normal                                               → formulário todos
  */
 
 import { Suspense, useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { TopBar }     from '@/components/ui/TopBar'
-import { useToast }   from '@/components/ui/use-toast'
+import { useSearchParams, useRouter }    from 'next/navigation'
+import { useSession }                    from 'next-auth/react'
+import { TopBar }                        from '@/components/ui/TopBar'
+import { useToast }                      from '@/components/ui/use-toast'
 import {
   getCriterios,
   getLabelTipo,
@@ -49,7 +54,6 @@ function DropdownNota({
   )
 }
 
-// ── Componente interno (usa useSearchParams — precisa de Suspense) ─────────
 function AlunoAvaliarContent() {
   const { data: session } = useSession()
   const params    = useSearchParams()
@@ -60,77 +64,123 @@ function AlunoAvaliarContent() {
   const tipo        = (params.get('tipo') ?? 'ABERTURA') as TipoEncontroForm
   const nomeProblem = params.get('nome') ?? ''
 
-  const [alunos,           setAlunos]           = useState<Aluno[]>([])
-  const [notas,            setNotas]             = useState<Record<string, NotaAluno>>({})
-  const [cardAtual,        setCardAtual]         = useState(0)
-  const [fase,             setFase]              = useState<'formulario' | 'revisao' | 'concluido'>('formulario')
-  const [carregando,       setCarregando]        = useState(true)
-  const [enviando,         setEnviando]          = useState(false)
-  const [modoComplementar, setModoComplementar]  = useState(false)
-  const [janelasInfo,      setJanelasInfo]       = useState<JanelaInfo[]>([])
+  const [alunos,            setAlunos]            = useState<Aluno[]>([])
+  // todosAlunos: grupo completo — usado na tela concluído após tardio completar
+  const [todosAlunos,       setTodosAlunos]       = useState<Aluno[]>([])
+  const [notas,             setNotas]              = useState<Record<string, NotaAluno>>({})
+  const [cardAtual,         setCardAtual]          = useState(0)
+  const [fase,              setFase]               = useState<'formulario' | 'revisao' | 'concluido'>('formulario')
+  const [carregando,        setCarregando]         = useState(true)
+  const [enviando,          setEnviando]           = useState(false)
+  const [modoComplementar,  setModoComplementar]   = useState(false)
+  const [tardioIncompleto,  setTardioIncompleto]   = useState(false)
+  const [janelasInfo,       setJanelasInfo]        = useState<JanelaInfo[]>([])
+  const [estaVisitando,     setEstaVisitando]      = useState(false)
+  const [turoriaDestino,    setTuroriaDestino]     = useState<string>('')
+  const [problemaEfetivo,   setProblemaEfetivo]    = useState<string>('')
 
   const criterios = getCriterios(tipo)
   const labelTipo = getLabelTipo(tipo)
 
   useEffect(() => {
-    if (!problemaId) return
+    if (!problemaId || !session?.user?.id) return
 
-    Promise.all([
-      fetch(`/api/avaliacoes/aluno?problemaId=${problemaId}&tipoEncontro=${tipo}`).then((r) => r.json()),
-      fetch('/api/modulos').then((r) => r.json()),
-    ]).then(([avalData, modulos]: [any, any[]]) => {
-      const janelasAbertas: JanelaInfo[] = avalData.janelasAbertas ?? []
-      // API já calcula corretamente:
-      // - aluno tardio (euSouOTardio=true) → modoComplementar=false, janelasAbertas=[]
-      // - outros alunos com janela aberta  → modoComplementar=true
-      const emComplementar = avalData.modoComplementar ?? (janelasAbertas.length > 0)
+    setCarregando(true)
 
-      setModoComplementar(emComplementar)
-      setJanelasInfo(janelasAbertas)
+    fetch(`/api/encontros-especiais/grupo?problemaId=${problemaId}&tipoEncontro=${tipo}`)
+      .then((r) => r.json())
+      .then(async (grupoData) => {
+        if (grupoData.error) { setCarregando(false); return }
 
-      // Busca a lista de alunos do módulo (sempre — mesmo se já submeteu, para exibir notas)
-      for (const m of modulos) {
-        const prob = m.problemas?.find((p: any) => p.id === problemaId)
-        if (prob) {
-          const todosAlunos: Aluno[] = m.matriculas.map((ma: any) => ma.usuario)
+        const probEfetivo = (grupoData.problemaEfetivoId as string) ?? problemaId
+        const visitando   = grupoData.estaVisitando ?? false
+        const grupoAlunos = (grupoData.grupo as Aluno[]) ?? []
 
-          let alunosParaAvaliar: Aluno[]
+        setProblemaEfetivo(probEfetivo)
+        setEstaVisitando(visitando)
+        if (visitando && grupoData.moduloDestino?.tutoria) {
+          setTuroriaDestino(grupoData.moduloDestino.tutoria)
+        }
 
-          if (emComplementar) {
-            // MODO COMPLEMENTAR (outros alunos): só mostra os alunos das janelas abertas
-            const idsJanelas = new Set(janelasAbertas.map((j) => j.alunoId))
-            alunosParaAvaliar = todosAlunos.filter((a) => idsJanelas.has(a.id))
-          } else {
-            // MODO NORMAL (inclui aluno tardio): todos os alunos, logado primeiro
-            const euMesmo = todosAlunos.find((a) => a.id === session?.user?.id)
-            const outros  = todosAlunos.filter((a) => a.id !== session?.user?.id)
-            alunosParaAvaliar = euMesmo ? [euMesmo, ...outros] : todosAlunos
+        // Grupo completo ordenado (eu primeiro) — para exibição no concluído
+        const euMesmo        = grupoAlunos.find((a) => a.id === session?.user?.id)
+        const outros         = grupoAlunos.filter((a) => a.id !== session?.user?.id)
+        const grupoOrdenado  = euMesmo ? [euMesmo, ...outros] : grupoAlunos
+        setTodosAlunos(grupoOrdenado)
+
+        const avalData = await fetch(
+          `/api/avaliacoes/aluno?problemaId=${probEfetivo}&tipoEncontro=${tipo}`
+        ).then((r) => r.json())
+
+        const janelasAbertas: JanelaInfo[] = avalData.janelasAbertas ?? []
+        const emComplementar  = avalData.modoComplementar ?? false
+        const euSouOTardio    = avalData.euSouOTardio ?? false
+        const jaSubmeteu      = avalData.submetido ?? false
+
+        setModoComplementar(emComplementar)
+        setJanelasInfo(janelasAbertas)
+
+        // ── PRIORIDADE 1: já submeteu ─────────────────────────────────────
+        if (jaSubmeteu) {
+          const idsJaAvaliados     = new Set((avalData.avaliacoes ?? []).map((av: any) => av.avaliadoId))
+          const alunosSemAvaliacao = grupoOrdenado.filter((a) => !idsJaAvaliados.has(a.id))
+
+          // CASO ESPECIAL: tardio com avaliação incompleta
+          // → mostra formulário apenas com os que faltam
+          if (euSouOTardio && alunosSemAvaliacao.length > 0) {
+            const init: Record<string, NotaAluno> = {}
+            for (const a of alunosSemAvaliacao) {
+              init[a.id] = { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
+            }
+            setAlunos(alunosSemAvaliacao)
+            setNotas(init)
+            setTardioIncompleto(true)
+            setCardAtual(0)
+            setFase('formulario')
+            setCarregando(false)
+            return
           }
 
-          setAlunos(alunosParaAvaliar)
-
-          // Pré-preenche com avaliações já salvas (se houver)
-          const init: Record<string, NotaAluno> = {}
-          for (const a of alunosParaAvaliar) {
-            const existente = avalData.avaliacoes?.find(
-              (av: any) => av.avaliadoId === a.id,
-            )
-            init[a.id] = existente
+          // Submeteu e completo → concluído com todos e todas as notas
+          const initNotas: Record<string, NotaAluno> = {}
+          for (const a of grupoOrdenado) {
+            const existente = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
+            initNotas[a.id] = existente
               ? { avaliadoId: a.id, c1: existente.c1, c2: existente.c2, c3: existente.c3, atitudes: existente.atitudes }
               : { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
           }
-          setNotas(init)
-
-          // Só vai para concluído APÓS carregar as notas (para exibição)
-          if (avalData.submetido && !emComplementar) {
-            setFase('concluido')
-          }
-
-          break
+          setAlunos(grupoOrdenado)
+          setNotas(initNotas)
+          setModoComplementar(false)
+          setJanelasInfo([])
+          setFase('concluido')
+          setCarregando(false)
+          return
         }
-      }
-      setCarregando(false)
-    })
+
+        // ── PRIORIDADE 2: não submeteu ────────────────────────────────────
+        let alunosParaAvaliar: Aluno[]
+
+        if (emComplementar) {
+          const idsJanelas = new Set(janelasAbertas.map((j) => j.alunoId))
+          alunosParaAvaliar = grupoAlunos.filter((a) => idsJanelas.has(a.id))
+        } else {
+          alunosParaAvaliar = grupoOrdenado
+        }
+
+        setAlunos(alunosParaAvaliar)
+
+        const init: Record<string, NotaAluno> = {}
+        for (const a of alunosParaAvaliar) {
+          const existente = (avalData.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
+          init[a.id] = existente
+            ? { avaliadoId: a.id, c1: existente.c1, c2: existente.c2, c3: existente.c3, atitudes: existente.atitudes }
+            : { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
+        }
+        setNotas(init)
+        setCarregando(false)
+      })
+      .catch(() => setCarregando(false))
   }, [problemaId, tipo, session?.user?.id])
 
   const setNota = (alunoId: string, campo: CampoNota, valor: number) => {
@@ -144,12 +194,31 @@ function AlunoAvaliarContent() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          problemaId,
+          problemaId:   problemaEfetivo || problemaId,
           tipoEncontro: tipo,
           avaliacoes:   Object.values(notas),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
+
+      // Após envio do tardio incompleto: recarrega todas as notas para exibição
+      if (tardioIncompleto) {
+        const avalFinal = await fetch(
+          `/api/avaliacoes/aluno?problemaId=${problemaEfetivo || problemaId}&tipoEncontro=${tipo}`
+        ).then((r) => r.json())
+
+        const initNotas: Record<string, NotaAluno> = {}
+        for (const a of todosAlunos) {
+          const existente = (avalFinal.avaliacoes ?? []).find((av: any) => av.avaliadoId === a.id)
+          initNotas[a.id] = existente
+            ? { avaliadoId: a.id, c1: existente.c1, c2: existente.c2, c3: existente.c3, atitudes: existente.atitudes }
+            : { avaliadoId: a.id, c1: 0, c2: 0, c3: 0, atitudes: 0 }
+        }
+        setAlunos(todosAlunos)
+        setNotas(initNotas)
+        setTardioIncompleto(false)
+      }
+
       setFase('concluido')
     } catch (e: any) {
       toast({ title: 'Erro ao enviar', description: e.message, variant: 'destructive' })
@@ -158,7 +227,7 @@ function AlunoAvaliarContent() {
     }
   }
 
-  const toNum = (v: any) => Number(v ?? 0)
+  const toNum   = (v: any) => Number(v ?? 0)
   const calcMAt = (n: NotaAluno) =>
     ((toNum(n.c1) + toNum(n.c2) + toNum(n.c3)) / 3 - toNum(n.atitudes)).toFixed(2)
 
@@ -169,25 +238,34 @@ function AlunoAvaliarContent() {
 
   if (carregando) return <div className="p-8 text-center text-gray-400">Carregando...</div>
 
-  // ── CONCLUÍDO — mostra notas lançadas em modo somente leitura ───────────
+  // ── CONCLUÍDO ─────────────────────────────────────────────────────────────
   if (fase === 'concluido') {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
         <main className="max-w-lg mx-auto px-4 py-6">
 
-          {/* Banner de confirmação */}
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 text-center">
             <div className="text-4xl mb-2">✅</div>
             <h1 className="text-base font-bold text-green-800 mb-1">
-              {modoComplementar ? 'Avaliação complementar enviada!' : 'Avaliação enviada!'}
+              {modoComplementar
+                ? 'Avaliação complementar enviada!'
+                : estaVisitando
+                  ? 'Avaliação como visitante enviada!'
+                  : 'Avaliação enviada!'}
             </h1>
-            <p className="text-xs text-green-600">
-              Notas registradas — somente leitura
-            </p>
+            <p className="text-xs text-green-600">Notas registradas — somente leitura</p>
           </div>
 
-          {/* Notas lançadas — somente leitura */}
+          {estaVisitando && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+              <span className="text-lg">🔄</span>
+              <p className="text-xs text-purple-700">
+                Você participou como <span className="font-bold">visitante</span> na {turoriaDestino}
+              </p>
+            </div>
+          )}
+
           {alunos.length > 0 && (
             <div className="space-y-3 mb-5">
               {alunos.map((aluno) => {
@@ -199,15 +277,12 @@ function AlunoAvaliarContent() {
                     <div className="flex items-center justify-between mb-3">
                       <p className="font-semibold text-sm text-gray-800">
                         {aluno.nome}
-                        {eEuMesmo && (
-                          <span className="ml-2 text-xs text-blue-500">(Você)</span>
-                        )}
+                        {eEuMesmo && <span className="ml-2 text-xs text-blue-500">(Você)</span>}
                       </p>
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                         🔒 Enviado
                       </span>
                     </div>
-
                     <div className="space-y-1.5">
                       {criterios.map((c) => (
                         <div key={c.campo} className="flex items-center justify-between text-xs">
@@ -229,7 +304,6 @@ function AlunoAvaliarContent() {
                         </span>
                       </div>
                     </div>
-
                     <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
                       M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
                     </div>
@@ -259,6 +333,16 @@ function AlunoAvaliarContent() {
           <div className="mb-5">
             <h1 className="text-xl font-bold text-[#1F4E79]">Revise antes de enviar</h1>
             <p className="text-sm text-gray-400">{nomeProblem} — {labelTipo}</p>
+            {tardioIncompleto && (
+              <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+                🧑‍🎓 Completando avaliação — colegas que ainda não foram avaliados
+              </div>
+            )}
+            {estaVisitando && (
+              <div className="mt-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-xs text-purple-700">
+                🔄 Avaliação como visitante — {turoriaDestino}
+              </div>
+            )}
             {modoComplementar && (
               <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
                 🧑‍🎓 Avaliação complementar — colega que chegou tarde
@@ -293,7 +377,9 @@ function AlunoAvaliarContent() {
                       <span className="text-gray-500">
                         <span className="font-semibold text-[#1F4E79]">Atitudes</span>
                       </span>
-                      <span className="font-bold text-gray-800 ml-2">{Number(n.atitudes ?? 0).toFixed(1)}</span>
+                      <span className="font-bold text-gray-800 ml-2">
+                        {Number(n.atitudes ?? 0).toFixed(1)}
+                      </span>
                     </div>
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
@@ -305,9 +391,13 @@ function AlunoAvaliarContent() {
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-700">
-            {modoComplementar
-              ? 'Após confirmar, esta avaliação complementar será registrada.'
-              : 'Após confirmar, não será possível alterar suas notas.'}
+            {tardioIncompleto
+              ? 'Após confirmar, as avaliações pendentes serão registradas.'
+              : modoComplementar
+                ? 'Após confirmar, esta avaliação complementar será registrada.'
+                : estaVisitando
+                  ? 'Após confirmar, sua avaliação como visitante será registrada e não poderá ser alterada.'
+                  : 'Após confirmar, não será possível alterar suas notas.'}
           </div>
 
           <div className="flex gap-3">
@@ -336,16 +426,40 @@ function AlunoAvaliarContent() {
       <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
       <main className="max-w-lg mx-auto px-4 py-6">
 
-        {/* Banner de modo complementar */}
+        {/* Banner tardio incompleto */}
+        {tardioIncompleto && (
+          <div className="bg-blue-50 border border-blue-300 rounded-xl p-3 mb-4 flex items-start gap-2">
+            <span className="text-xl">📋</span>
+            <div>
+              <p className="text-sm font-bold text-blue-800">Avaliação pendente</p>
+              <p className="text-xs text-blue-700">
+                Você ainda não avaliou todos os colegas deste encontro. Avalie os {alunos.length} restante{alunos.length > 1 ? 's' : ''} para concluir.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {estaVisitando && !tardioIncompleto && (
+          <div className="bg-purple-50 border border-purple-300 rounded-xl p-3 mb-4 flex items-start gap-2">
+            <span className="text-xl">🔄</span>
+            <div>
+              <p className="text-sm font-bold text-purple-800">Você está em outra tutoria</p>
+              <p className="text-xs text-purple-700">
+                Situação Excepcional — avalie os colegas da <span className="font-semibold">{turoriaDestino}</span> neste encontro
+              </p>
+            </div>
+          </div>
+        )}
+
         {modoComplementar && (
           <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 mb-4 flex items-start gap-2">
             <span className="text-xl">🧑‍🎓</span>
             <div>
               <p className="text-sm font-bold text-amber-800">Avaliação complementar</p>
               <p className="text-xs text-amber-700">
-                Um colega chegou tarde à tutoria. Avalie{' '}
-                {janelasInfo.map((j) => j.aluno.nome).join(', ')}
-                {' '}para registrar a participação {/* normalização da frase */}
+                Um colega chegou tarde. Avalie{' '}
+                {janelasInfo.map((j) => j.aluno.nome).join(', ')}{' '}
+                para registrar a participação
               </p>
             </div>
           </div>
@@ -354,11 +468,16 @@ function AlunoAvaliarContent() {
         <div className="mb-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">{nomeProblem} — {labelTipo}</p>
           <h1 className="text-xl font-bold text-[#1F4E79] mt-0.5">
-            {modoComplementar ? 'Avaliar Colega Tardio' : 'Avaliar Colegas'}
+            {tardioIncompleto
+              ? 'Completar Avaliação'
+              : modoComplementar
+                ? 'Avaliar Colega Tardio'
+                : estaVisitando
+                  ? 'Avaliação como Visitante'
+                  : 'Avaliar Colegas'}
           </h1>
         </div>
 
-        {/* Barra de progresso */}
         <div className="bg-gray-200 rounded-full h-1.5 mb-1">
           <div
             className="bg-[#2E75B6] h-1.5 rounded-full transition-all"
@@ -369,16 +488,13 @@ function AlunoAvaliarContent() {
           {cardAtual + 1} de {alunos.length}
         </p>
 
-        {/* Card do aluno atual */}
         {alunoAtual && notaAtual && (
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="text-center mb-5">
               <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2 ${
                 eVoce ? 'bg-green-600 ring-4 ring-green-200' : 'bg-[#1F4E79]'
               }`}>
-                <span className="text-white text-xl font-bold">
-                  {alunoAtual.nome.charAt(0)}
-                </span>
+                <span className="text-white text-xl font-bold">{alunoAtual.nome.charAt(0)}</span>
               </div>
 
               {modoComplementar ? (
@@ -396,7 +512,9 @@ function AlunoAvaliarContent() {
               ) : (
                 <div className="mb-1">
                   <span className="inline-block bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
-                    Avaliação Interpares — {cardAtual} de {alunos.length - 1}
+                    {estaVisitando
+                      ? '🔄 Avaliação Interpares (tutoria visitada)'
+                      : `Avaliação Interpares — ${cardAtual} de ${alunos.length - 1}`}
                   </span>
                 </div>
               )}
@@ -495,7 +613,6 @@ function AlunoAvaliarContent() {
   )
 }
 
-// ── Export default com Suspense (obrigatório pelo Next.js para useSearchParams) ──
 export default function AlunoAvaliarPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-gray-400">Carregando...</div>}>
