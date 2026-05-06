@@ -203,7 +203,7 @@ function AlunoAvaliarContent() {
         body:    JSON.stringify({
           problemaId:   problemaEfetivo || problemaId,
           tipoEncontro: tipo,
-          avaliacoes:   Object.values(notas),
+          avaliacoes:   Object.values(notas).map((av) => ({ avaliadoId: av.avaliadoId, c1: Number(av.c1), c2: Number(av.c2), c3: Number(av.c3), atitudes: Number(av.atitudes) })),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)

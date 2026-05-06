@@ -2,23 +2,32 @@
  * TutoriaAvalia v2
  * Autor: Jackson Lima — CESUPA
  * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
- * * ARQUIVO DE VALIDAÇÕES (ZOD)
+ *
+ * ARQUIVO DE VALIDAÇÕES (ZOD)
  * Estas regras garantem que nenhum dado malicioso ou mal formatado
  * chegue ao banco de dados Neon, blindando as Server Actions.
+ *
+ * CORREÇÃO: notaSchema e atitudesSchema usam z.coerce.number() em vez de
+ * z.number() para aceitar strings numéricas vindas do Prisma Decimal
+ * (ex: "3.0000" → 3). Sem coerce, o Zod retornava 400 ao aluno tardio
+ * incompleto porque os valores salvos no banco voltam como strings.
  */
 import { z } from 'zod'
 
 // ── Tipos Base ────────────────────────────────────────────────────
 
 // Nota para critérios (0-5), aceita valores do dropdown incluindo 4.5
+// z.coerce.number() converte string → number antes de validar (fix Prisma Decimal)
 const notaSchema = z
-  .number({ required_error: 'Campo obrigatório', invalid_type_error: 'Deve ser um número' })
+  .coerce
+  .number({ invalid_type_error: 'Deve ser um número' })
   .min(0, 'Mínimo: 0')
   .max(5, 'Máximo: 5')
 
 // Nota para atitudes (0-1 em passos de 0.2)
 const atitudesSchema = z
-  .number({ required_error: 'Campo obrigatório', invalid_type_error: 'Deve ser um número' })
+  .coerce
+  .number({ invalid_type_error: 'Deve ser um número' })
   .min(0, 'Mínimo: 0')
   .max(1, 'Máximo: 1')
 
@@ -86,11 +95,9 @@ export const criarModuloSchema = z.object({
   problemasSaltoTriplo: z.array(z.number().int().min(1)).optional(),
 })
 
-// Exporta a tipagem perfeita para o TypeScript usar nas Server Actions
 export type CriarModuloInput = z.infer<typeof criarModuloSchema>
 
 // ── Editar Módulo ─────────────────────────────────────────────────
-// Todos os campos opcionais exceto os de identidade
 export const editarModuloSchema = z.object({
   nome:     z.enum(OPCOES_MODULO, { required_error: 'Selecione o módulo' }),
   ano:      z.number().int().min(2020).max(2100),
@@ -98,7 +105,6 @@ export const editarModuloSchema = z.object({
   tutoria:  z.enum(OPCOES_TUTORIA, { required_error: 'Selecione a tutoria' }),
   turma:    z.enum(OPCOES_TURMA,   { required_error: 'Selecione a turma'  }),
 
-  // Alunos: lista de emails atual (o servidor calcula adds/removes)
   emailsAlunos: z
     .array(z.string().email('Email inválido'))
     .min(1, 'Adicione pelo menos 1 aluno')
@@ -114,10 +120,10 @@ const TIPOS_ENCONTRO = ['ABERTURA', 'FECHAMENTO', 'FECHAMENTO_A', 'FECHAMENTO_B'
 
 const avaliacaoIndividualTutorSchema = z.object({
   avaliadoId:        z.string().uuid(),
-  c1:                notaSchema,      
-  c2:                notaSchema,      
-  c3:                notaSchema,      
-  atitudes:          atitudesSchema,  
+  c1:                notaSchema,
+  c2:                notaSchema,
+  c3:                notaSchema,
+  atitudes:          atitudesSchema,
   ativCompensatoria: z.boolean().default(false),
   faltou:            z.boolean().default(false),
 })
@@ -125,7 +131,6 @@ const avaliacaoIndividualTutorSchema = z.object({
 export const avaliacaoTutorSchema = z.object({
   problemaId:   z.string().uuid(),
   tipoEncontro: z.enum(TIPOS_ENCONTRO),
-  // Valida que o envio possui pelo menos 1 aluno e no máximo 11 (tamanho do grupo PBL)
   avaliacoes:   z.array(avaliacaoIndividualTutorSchema).min(1).max(30),
 })
 
