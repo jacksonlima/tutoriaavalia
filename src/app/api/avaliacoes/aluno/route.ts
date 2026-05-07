@@ -8,14 +8,19 @@
  *     → só avalia o(s) aluno(s) da janela; upsert livre; não cria Submissao
  *
  *   MODO NORMAL / TARDIO (primeira submissão):
- *     → verifica encontro ativo, verifica Submissao prévia, create + Submissao
+ *     → verifica encontro ativo, verifica Submissao prévia
+ *     → usa UPSERT (não create) para AvaliacaoAluno — evita P2002
+ *     → cria Submissao ao final (trava real)
  *
  *   CASO ESPECIAL — TARDIO INCOMPLETO:
- *     → euSouOTardio && jaSubmeteu (submeteu incompleto antes do bug ser corrigido)
+ *     → euSouOTardio && jaSubmeteu
  *     → upsert das avaliações que faltam SEM criar nova Submissao
  *
- *   FIND-NEW-02: GET agora retorna `encontroAtivo` para que o frontend
- *     possa bloquear a renderização do formulário se o encontro estiver fechado.
+ *   FIND-NEW-02: GET retorna `encontroAtivo` para bloquear formulário no frontend.
+ *
+ *   CORREÇÃO P2002: AvaliacaoAluno usa sempre upsert — a trava de
+ *   "uma submissão por aluno" é garantida pelo registro Submissao,
+ *   não pelo create do AvaliacaoAluno.
  */
 
 import { auth }               from '@/lib/auth'
@@ -23,6 +28,36 @@ import { avaliacaoAlunoSchema } from '@/lib/validations'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
+
+// Helper: upsert de uma AvaliacaoAluno (nunca falha por P2002)
+async function upsertAvaliacao(
+  tx:           any,
+  problemaId:   string,
+  avaliadorId:  string,
+  tipoEncontro: string,
+  av:           { avaliadoId: string; c1: number; c2: number; c3: number; atitudes: number },
+) {
+  return tx.avaliacaoAluno.upsert({
+    where: {
+      problemaId_avaliadorId_avaliadoId_tipoEncontro: {
+        problemaId,
+        avaliadorId,
+        avaliadoId:   av.avaliadoId,
+        tipoEncontro: tipoEncontro as any,
+      },
+    },
+    create: {
+      problemaId,
+      avaliadorId,
+      avaliadoId:   av.avaliadoId,
+      tipoEncontro: tipoEncontro as any,
+      c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
+    },
+    update: {
+      c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
+    },
+  })
+}
 
 // ── POST ─────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -36,9 +71,9 @@ export async function POST(req: NextRequest) {
   const body   = await req.json()
   const result = avaliacaoAlunoSchema.safeParse(body)
   if (!result.success) {
-    console.error("[zod-error]", JSON.stringify(result.error.flatten()))
-  console.error("[zod-body]", JSON.stringify(body))
-  return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
+    console.error('[avaliacoes/aluno] Zod error:', JSON.stringify(result.error.flatten()))
+    console.error('[avaliacoes/aluno] body recebido:', JSON.stringify(body))
+    return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
   }
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
@@ -84,20 +119,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       for (const av of avaliacoes) {
-        await tx.avaliacaoAluno.upsert({
-          where: {
-            problemaId_avaliadorId_avaliadoId_tipoEncontro: {
-              problemaId, avaliadorId: userId,
-              avaliadoId: av.avaliadoId, tipoEncontro: tipoEncontro as any,
-            },
-          },
-          create: {
-            problemaId, avaliadorId: userId, avaliadoId: av.avaliadoId,
-            tipoEncontro: tipoEncontro as any,
-            c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
-          },
-          update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
-        })
+        await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
       }
     })
 
@@ -122,24 +144,12 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // ── CASO ESPECIAL: tardio com submissão incompleta ────────────────────────
+  // ── TARDIO INCOMPLETO: já submeteu mas ainda tem avaliações faltando ──────
+  // Usa upsert SEM criar nova Submissao (a original permanece como trava)
   if (jaSubmeteu && euSouOTardio) {
     await prisma.$transaction(async (tx) => {
       for (const av of avaliacoes) {
-        await tx.avaliacaoAluno.upsert({
-          where: {
-            problemaId_avaliadorId_avaliadoId_tipoEncontro: {
-              problemaId, avaliadorId: userId,
-              avaliadoId: av.avaliadoId, tipoEncontro: tipoEncontro as any,
-            },
-          },
-          create: {
-            problemaId, avaliadorId: userId, avaliadoId: av.avaliadoId,
-            tipoEncontro: tipoEncontro as any,
-            c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
-          },
-          update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
-        })
+        await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
       }
     })
 
@@ -149,6 +159,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // ── Bloqueia submissão duplicada (alunos normais) ─────────────────────────
   if (jaSubmeteu) {
     return NextResponse.json(
       { error: 'Você já enviou esta avaliação. Não é possível alterar após o envio.' },
@@ -156,24 +167,25 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // ── PRIMEIRA SUBMISSÃO ────────────────────────────────────────────────────
+  // Usa UPSERT (não create) para AvaliacaoAluno.
+  // Motivo: evita P2002 caso algum registro já exista por qualquer inconsistência
+  // histórica (ex: submissão parcial, janela reaberta, etc.).
+  // A trava "uma submissão por aluno" é garantida pelo registro Submissao abaixo.
   const ipOrigem  = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'desconhecido'
   const userAgent = req.headers.get('user-agent') ?? ''
 
   await prisma.$transaction(async (tx) => {
     for (const av of avaliacoes) {
-      await tx.avaliacaoAluno.create({
-        data: {
-          problemaId, avaliadorId: userId, avaliadoId: av.avaliadoId,
-          tipoEncontro: tipoEncontro as any,
-          c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
-        },
-      })
+      await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
     }
     await tx.submissao.create({
       data: {
-        problemaId, avaliadorId: userId,
+        problemaId,
+        avaliadorId:  userId,
         tipoEncontro: tipoEncontro as any,
-        ipOrigem, userAgent,
+        ipOrigem,
+        userAgent,
       },
     })
   })
@@ -200,7 +212,6 @@ export async function GET(req: NextRequest) {
   const userId = session?.user?.id!
 
   const [problema, submetido, avaliacoes, janelasAbertas] = await Promise.all([
-    // FIND-NEW-02: busca o problema para verificar se o encontro está ativo
     prisma.problema.findUnique({
       where:  { id: problemaId },
       select: {
@@ -227,7 +238,6 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  // FIND-NEW-02: calcula se o encontro está ativo para este tipoEncontro
   const campoAtivo: Record<string, boolean> = {
     ABERTURA:     problema?.aberturaAtiva    ?? false,
     FECHAMENTO:   problema?.fechamentoAtivo  ?? false,
@@ -243,7 +253,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     avaliacoes,
     submetido:      !!submetido,
-    encontroAtivo,  // FIND-NEW-02: frontend usa para bloquear renderização
+    encontroAtivo,
     janelasAbertas: modoComplementar ? janelasAbertas : [],
     modoComplementar,
     euSouOTardio,
