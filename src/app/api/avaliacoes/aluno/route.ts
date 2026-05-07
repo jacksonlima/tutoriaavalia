@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
   const body   = await req.json()
   const result = avaliacaoAlunoSchema.safeParse(body)
   if (!result.success) {
-    return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
+    console.error("[zod-error]", JSON.stringify(result.error.flatten()))
+  console.error("[zod-body]", JSON.stringify(body))
+  return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
   }
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
