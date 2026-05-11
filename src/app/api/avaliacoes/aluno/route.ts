@@ -3,23 +3,11 @@
  * Autor: Jackson Lima — CESUPA
  *
  * REGRAS:
- *
- *   MODO COMPLEMENTAR (janela aberta, aluno não é o tardio):
- *     → só avalia o(s) aluno(s) da janela; upsert livre; não cria Submissao
- *
- *   MODO NORMAL / TARDIO (primeira submissão):
- *     → verifica encontro ativo, verifica Submissao prévia
- *     → usa UPSERT para AvaliacaoAluno (evita P2002)
- *     → cria Submissao ao final (trava real)
- *     → dispara notificações para tutor titular e co-tutores
- *
- *   CASO ESPECIAL — TARDIO INCOMPLETO:
- *     → euSouOTardio && jaSubmeteu
- *     → upsert das avaliações que faltam SEM criar nova Submissao
- *     → dispara notificações normalmente
- *
- *   FIND-NEW-02: GET retorna `encontroAtivo` para bloquear formulário no frontend.
- *   P2002 FIX: AvaliacaoAluno usa sempre upsert — trava garantida pelo Submissao.
+ *   MODO COMPLEMENTAR: upsert + notifica; não cria Submissao
+ *   MODO NORMAL:       upsert + Submissao + notifica
+ *   TARDIO INCOMPLETO: upsert sem nova Submissao + notifica
+ *   FIND-NEW-02:       GET retorna encontroAtivo
+ *   P2002 FIX:         AvaliacaoAluno sempre via upsert
  */
 
 import { auth }               from '@/lib/auth'
@@ -88,7 +76,6 @@ async function criarNotificacoes(
   tutorIds.add(params.moduloTutorId)
 
   // Co-tutores com permissão para este problema + tipoEncontro
-  // Nota: CoTutorPermissao tem tutorId diretamente (sem relação aninhada)
   const perms = await prisma.coTutorPermissao.findMany({
     where:  { problemaId: params.problemaId, tipoEncontro: params.tipoEncontro },
     select: { tutorId: true },
@@ -97,7 +84,6 @@ async function criarNotificacoes(
 
   if (tutorIds.size === 0) return
 
-  // Notificacao usa usuarioId (não tutorId) — corrigido em relação ao código original
   await prisma.notificacao.createMany({
     data: Array.from(tutorIds).map((usuarioId) => ({
       usuarioId,
@@ -172,7 +158,6 @@ export async function POST(req: NextRequest) {
   const euSouOTardio       = idsJanelasAbertas.has(userId)
   const emModoComplementar = janelasAbertas.length > 0 && !euSouOTardio
 
-  // Parâmetros de notificação (reutilizado em múltiplos caminhos)
   const notifParams = {
     alunoNome:      session?.user?.nome ?? '',
     problemaId,
@@ -206,7 +191,6 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Notifica tutor sobre avaliação complementar
     criarNotificacoes(prisma, notifParams).catch((e) =>
       console.error('[notificacao] erro complementar:', e)
     )
@@ -232,7 +216,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // ── TARDIO INCOMPLETO: submeteu mas tem avaliações faltando ────────────────
+  // ── TARDIO INCOMPLETO ───────────────────────────────────────────────────────
   if (jaSubmeteu && euSouOTardio) {
     await prisma.$transaction(async (tx: any) => {
       for (const av of avaliacoes) {
@@ -240,7 +224,6 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Notifica tutor sobre complemento de avaliação
     criarNotificacoes(prisma, notifParams).catch((e) =>
       console.error('[notificacao] erro tardio:', e)
     )
@@ -251,7 +234,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // ── Bloqueia submissão duplicada (alunos normais) ───────────────────────────
+  // ── Bloqueia duplicata (alunos normais) ─────────────────────────────────────
   if (jaSubmeteu) {
     return NextResponse.json(
       { error: 'Você já enviou esta avaliação. Não é possível alterar após o envio.' },
@@ -278,7 +261,6 @@ export async function POST(req: NextRequest) {
     })
   })
 
-  // Notifica tutor e co-tutores — melhor esforço, não reverte submissão
   criarNotificacoes(prisma, notifParams).catch((e) =>
     console.error('[notificacao] erro:', e)
   )
