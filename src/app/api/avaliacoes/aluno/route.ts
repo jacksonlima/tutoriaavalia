@@ -9,18 +9,17 @@
  *
  *   MODO NORMAL / TARDIO (primeira submissão):
  *     → verifica encontro ativo, verifica Submissao prévia
- *     → usa UPSERT (não create) para AvaliacaoAluno — evita P2002
+ *     → usa UPSERT para AvaliacaoAluno (evita P2002)
  *     → cria Submissao ao final (trava real)
+ *     → dispara notificações para tutor titular e co-tutores
  *
  *   CASO ESPECIAL — TARDIO INCOMPLETO:
  *     → euSouOTardio && jaSubmeteu
  *     → upsert das avaliações que faltam SEM criar nova Submissao
+ *     → dispara notificações normalmente
  *
  *   FIND-NEW-02: GET retorna `encontroAtivo` para bloquear formulário no frontend.
- *
- *   CORREÇÃO P2002: AvaliacaoAluno usa sempre upsert — a trava de
- *   "uma submissão por aluno" é garantida pelo registro Submissao,
- *   não pelo create do AvaliacaoAluno.
+ *   P2002 FIX: AvaliacaoAluno usa sempre upsert — trava garantida pelo Submissao.
  */
 
 import { auth }               from '@/lib/auth'
@@ -29,7 +28,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Helper: upsert de uma AvaliacaoAluno (nunca falha por P2002)
+// ── Helper: upsert de AvaliacaoAluno (nunca falha por P2002) ─────────────────
 async function upsertAvaliacao(
   tx:           any,
   problemaId:   string,
@@ -59,7 +58,60 @@ async function upsertAvaliacao(
   })
 }
 
-// ── POST ─────────────────────────────────────────────────────────────────────
+// ── Helper: cria notificações após submissão ──────────────────────────────────
+// Melhor esforço — falha NÃO reverte a submissão (chamado com .catch())
+async function criarNotificacoes(
+  prisma: any,
+  params: {
+    alunoNome:      string
+    problemaId:     string
+    tipoEncontro:   string
+    problemaNumero: number
+    moduloId:       string
+    moduloNome:     string
+    moduloTutoria:  string
+    moduloTutorId:  string
+  }
+) {
+  const tipoLabel: Record<string, string> = {
+    ABERTURA:     'Abertura',
+    FECHAMENTO:   'Fechamento',
+    FECHAMENTO_A: 'Fechamento A (Salto Triplo)',
+    FECHAMENTO_B: 'Fechamento B (Salto Triplo)',
+  }
+
+  const titulo   = `Nova avaliação — P${params.problemaNumero} ${tipoLabel[params.tipoEncontro] ?? params.tipoEncontro}`
+  const mensagem = `${params.alunoNome} enviou as avaliações de ${tipoLabel[params.tipoEncontro] ?? params.tipoEncontro} do Problema ${params.problemaNumero} — ${params.moduloNome} (${params.moduloTutoria}).`
+
+  // Coleta IDs dos tutores a notificar (sem duplicatas)
+  const tutorIds = new Set<string>()
+  tutorIds.add(params.moduloTutorId)
+
+  // Co-tutores com permissão para este problema + tipoEncontro
+  // Nota: CoTutorPermissao tem tutorId diretamente (sem relação aninhada)
+  const perms = await prisma.coTutorPermissao.findMany({
+    where:  { problemaId: params.problemaId, tipoEncontro: params.tipoEncontro },
+    select: { tutorId: true },
+  })
+  for (const p of perms) tutorIds.add(p.tutorId)
+
+  if (tutorIds.size === 0) return
+
+  // Notificacao usa usuarioId (não tutorId) — corrigido em relação ao código original
+  await prisma.notificacao.createMany({
+    data: Array.from(tutorIds).map((usuarioId) => ({
+      usuarioId,
+      moduloId: params.moduloId,
+      tipo:     'AVALIACAO_ALUNO',
+      titulo,
+      mensagem,
+      lida:     false,
+    })),
+    skipDuplicates: true,
+  })
+}
+
+// ── POST ──────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
@@ -72,14 +124,33 @@ export async function POST(req: NextRequest) {
   const result = avaliacaoAlunoSchema.safeParse(body)
   if (!result.success) {
     console.error('[avaliacoes/aluno] Zod error:', JSON.stringify(result.error.flatten()))
-    console.error('[avaliacoes/aluno] body recebido:', JSON.stringify(body))
+    console.error('[avaliacoes/aluno] body:', JSON.stringify(body))
     return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
   }
 
   const { problemaId, tipoEncontro, avaliacoes } = result.data
   const userId = session?.user?.id!
 
-  const problema = await prisma.problema.findUnique({ where: { id: problemaId } })
+  // Busca problema com dados do módulo para notificações
+  const problema = await prisma.problema.findUnique({
+    where:  { id: problemaId },
+    select: {
+      numero:           true,
+      aberturaAtiva:    true,
+      fechamentoAtivo:  true,
+      fechamentoAAtivo: true,
+      fechamentoBAtivo: true,
+      modulo: {
+        select: {
+          id:      true,
+          nome:    true,
+          tutoria: true,
+          tutorId: true,
+        },
+      },
+    },
+  })
+
   if (!problema) {
     return NextResponse.json({ error: 'Problema não encontrado' }, { status: 404 })
   }
@@ -101,7 +172,19 @@ export async function POST(req: NextRequest) {
   const euSouOTardio       = idsJanelasAbertas.has(userId)
   const emModoComplementar = janelasAbertas.length > 0 && !euSouOTardio
 
-  // ── MODO COMPLEMENTAR ─────────────────────────────────────────────────────
+  // Parâmetros de notificação (reutilizado em múltiplos caminhos)
+  const notifParams = {
+    alunoNome:      session?.user?.nome ?? '',
+    problemaId,
+    tipoEncontro,
+    problemaNumero: problema.numero,
+    moduloId:       problema.modulo.id,
+    moduloNome:     problema.modulo.nome,
+    moduloTutoria:  problema.modulo.tutoria,
+    moduloTutorId:  problema.modulo.tutorId,
+  }
+
+  // ── MODO COMPLEMENTAR ───────────────────────────────────────────────────────
   if (emModoComplementar) {
     const idsEnviados        = new Set(avaliacoes.map((a) => a.avaliadoId))
     const avaliadosInvalidos = [...idsEnviados].filter((id) => !idsJanelasAbertas.has(id))
@@ -117,18 +200,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const av of avaliacoes) {
         await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
       }
     })
+
+    // Notifica tutor sobre avaliação complementar
+    criarNotificacoes(prisma, notifParams).catch((e) =>
+      console.error('[notificacao] erro complementar:', e)
+    )
 
     return NextResponse.json({
       sucesso: true, travado: false, modoComplementar: true, euSouOTardio: false,
     })
   }
 
-  // ── MODO NORMAL / TARDIO ──────────────────────────────────────────────────
+  // ── MODO NORMAL / TARDIO ────────────────────────────────────────────────────
   if (!encontroAtivo) {
     return NextResponse.json(
       { error: 'Este encontro ainda não foi aberto pelo professor.' },
@@ -144,14 +232,18 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // ── TARDIO INCOMPLETO: já submeteu mas ainda tem avaliações faltando ──────
-  // Usa upsert SEM criar nova Submissao (a original permanece como trava)
+  // ── TARDIO INCOMPLETO: submeteu mas tem avaliações faltando ────────────────
   if (jaSubmeteu && euSouOTardio) {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const av of avaliacoes) {
         await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
       }
     })
+
+    // Notifica tutor sobre complemento de avaliação
+    criarNotificacoes(prisma, notifParams).catch((e) =>
+      console.error('[notificacao] erro tardio:', e)
+    )
 
     return NextResponse.json({
       sucesso: true, travado: true, modoComplementar: false,
@@ -159,7 +251,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // ── Bloqueia submissão duplicada (alunos normais) ─────────────────────────
+  // ── Bloqueia submissão duplicada (alunos normais) ───────────────────────────
   if (jaSubmeteu) {
     return NextResponse.json(
       { error: 'Você já enviou esta avaliação. Não é possível alterar após o envio.' },
@@ -167,15 +259,11 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── PRIMEIRA SUBMISSÃO ────────────────────────────────────────────────────
-  // Usa UPSERT (não create) para AvaliacaoAluno.
-  // Motivo: evita P2002 caso algum registro já exista por qualquer inconsistência
-  // histórica (ex: submissão parcial, janela reaberta, etc.).
-  // A trava "uma submissão por aluno" é garantida pelo registro Submissao abaixo.
+  // ── PRIMEIRA SUBMISSÃO ──────────────────────────────────────────────────────
   const ipOrigem  = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'desconhecido'
   const userAgent = req.headers.get('user-agent') ?? ''
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     for (const av of avaliacoes) {
       await upsertAvaliacao(tx, problemaId, userId, tipoEncontro, av)
     }
@@ -190,12 +278,17 @@ export async function POST(req: NextRequest) {
     })
   })
 
+  // Notifica tutor e co-tutores — melhor esforço, não reverte submissão
+  criarNotificacoes(prisma, notifParams).catch((e) =>
+    console.error('[notificacao] erro:', e)
+  )
+
   return NextResponse.json({
     sucesso: true, travado: true, modoComplementar: false, euSouOTardio,
   })
 }
 
-// ── GET ───────────────────────────────────────────────────────────────────────
+// ── GET ────────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const { prisma } = await import('@/lib/db')
   const session = await auth()
