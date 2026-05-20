@@ -8,6 +8,14 @@
  *   TARDIO INCOMPLETO: upsert sem nova Submissao + notifica
  *   FIND-NEW-02:       GET retorna encontroAtivo
  *   P2002 FIX:         AvaliacaoAluno sempre via upsert
+ *
+ * NOTIFICAÇÕES:
+ *   Banco tem colunas híbridas (migração parcial):
+ *     tutor_id   TEXT NOT NULL  ← obrigatório, coluna antiga
+ *     usuario_id TEXT           ← nova (nullable ainda)
+ *     modulo_id  TEXT           ← nova (nullable)
+ *     tipo       TEXT NOT NULL DEFAULT 'GERAL' ← nova
+ *   Enviamos tutor_id + usuario_id para compatibilidade total.
  */
 
 import { auth }               from '@/lib/auth'
@@ -47,7 +55,9 @@ async function upsertAvaliacao(
 }
 
 // ── Helper: cria notificações após submissão ──────────────────────────────────
-// Melhor esforço — falha NÃO reverte a submissão (chamado com .catch())
+// Banco tem colunas híbridas — envia tutor_id (NOT NULL obrigatório) e
+// usuario_id/modulo_id/tipo (novas colunas já existentes).
+// Melhor esforço — falha NÃO reverte a submissão.
 async function criarNotificacoes(
   prisma: any,
   params: {
@@ -84,17 +94,17 @@ async function criarNotificacoes(
 
   if (tutorIds.size === 0) return
 
-  await prisma.notificacao.createMany({
-    data: Array.from(tutorIds).map((usuarioId) => ({
-      usuarioId,
-      moduloId: params.moduloId,
-      tipo:     'AVALIACAO_ALUNO',
-      titulo,
-      mensagem,
-      lida:     false,
-    })),
-    skipDuplicates: true,
-  })
+  // Usa $executeRawUnsafe para ter controle total das colunas
+  // e evitar conflito entre schema Prisma e estrutura real do banco
+  for (const tutorId of tutorIds) {
+    await prisma.$executeRaw`
+      INSERT INTO notificacoes
+        (id, tutor_id, usuario_id, modulo_id, tipo, titulo, mensagem, lida)
+      VALUES
+        (gen_random_uuid()::text, ${tutorId}, ${tutorId}, ${params.moduloId},
+         'AVALIACAO_ALUNO', ${titulo}, ${mensagem}, false)
+    `
+  }
 }
 
 // ── POST ──────────────────────────────────────────────────────────────────────
