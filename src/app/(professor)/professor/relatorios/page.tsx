@@ -53,16 +53,13 @@ export default async function RelatoriosPage({ searchParams }: Props) {
   ])
 
   // ── Situações Excepcionais: alunos deste módulo que foram visitantes ──────
-  // Inclui problemaDestino.numero para correspondência com coluna do relatório
   const situacoesExcepcionais = await prisma.situacaoExcepcional.findMany({
     where:   { moduloOrigemId: moduloId },
     include: { problemaDestino: { select: { id: true, numero: true } } },
   })
 
-  // IDs únicos dos problemas destino (de outros módulos)
   const destProblemaIds = [...new Set(situacoesExcepcionais.map((s) => s.problemaDestinoId))]
 
-  // Avaliações externas (nos módulos destino) para os alunos visitantes
   const [avaliacoesTutorExt, avaliacoesAlunoExt] =
     destProblemaIds.length > 0
       ? await Promise.all([
@@ -71,13 +68,10 @@ export default async function RelatoriosPage({ searchParams }: Props) {
         ])
       : [[], []]
 
-  // Mescla avaliações locais + externas para facilitar lookup
   const todasAvaliacoesTutor = [...avaliacoesTutor, ...avaliacoesTutorExt]
   const todasAvaliacoesAluno = [...avaliacoesAluno, ...avaliacoesAlunoExt]
 
   // ── Helper: resolve problemaId efetivo para aluno/tipo ───────────────────
-  // Se há SE para este aluno neste tipo de encontro cujo problema destino
-  // tem o mesmo número que o problema atual → usa o problema destino
   function resolverProbId(probId: string, probNumero: number, alunoId: string, tipo: string): string {
     const se = situacoesExcepcionais.find(
       (s) =>
@@ -114,12 +108,25 @@ export default async function RelatoriosPage({ searchParams }: Props) {
       ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes))
       : null
 
+    // IDs de avaliadores com ativCompensatoria neste problema/encontro.
+    // Suas avaliações são ignoradas nos interpares — mesmo comportamento do faltou.
+    const idsAtivComp = new Set(
+      todasAvaliacoesTutor
+        .filter((t) =>
+          t.problemaId === efetivoProbId &&
+          t.tipoEncontro === tipo &&
+          t.ativCompensatoria,
+        )
+        .map((t) => t.avaliadoId),
+    )
+
     const pares = todasAvaliacoesAluno.filter(
       (a) =>
         a.problemaId === efetivoProbId &&
         a.avaliadoId === alunoId &&
         a.avaliadorId !== alunoId &&
-        a.tipoEncontro === tipo,
+        a.tipoEncontro === tipo &&
+        !idsAtivComp.has(a.avaliadorId),   // ← ignora avaliações de quem tem ativComp
     )
     const mi =
       pares.length > 0
@@ -136,7 +143,6 @@ export default async function RelatoriosPage({ searchParams }: Props) {
     return arredondar(nota as number)
   }
 
-  // ── Indica se aluno foi visitante em algum encontro (para ícone na tabela) ─
   const alunosComSE = new Set(situacoesExcepcionais.map((s) => s.alunoId))
 
   const resumo = modulo.matriculas.map((mat) => {
@@ -162,10 +168,10 @@ export default async function RelatoriosPage({ searchParams }: Props) {
       }
     }
 
-    const mediaAb    = notasAb.length > 0 ? arredondar(notasAb.reduce((a, b) => a + b, 0) / notasAb.length) : null
-    const mediaFe    = notasFe.length > 0 ? arredondar(notasFe.reduce((a, b) => a + b, 0) / notasFe.length) : null
-    const notaFinal  = mediaAb !== null && mediaFe !== null ? arredondar(Math.min(mediaAb + mediaFe, 10)) : null
-    const temSE      = alunosComSE.has(aluno.id)
+    const mediaAb   = notasAb.length > 0 ? arredondar(notasAb.reduce((a, b) => a + b, 0) / notasAb.length) : null
+    const mediaFe   = notasFe.length > 0 ? arredondar(notasFe.reduce((a, b) => a + b, 0) / notasFe.length) : null
+    const notaFinal = mediaAb !== null && mediaFe !== null ? arredondar(Math.min(mediaAb + mediaFe, 10)) : null
+    const temSE     = alunosComSE.has(aluno.id)
 
     return { aluno, notas, mediaAb, mediaFe, notaFinal, temSE }
   })
@@ -190,7 +196,6 @@ export default async function RelatoriosPage({ searchParams }: Props) {
           </Link>
         </div>
 
-        {/* Banner de SE presente no módulo */}
         {situacoesExcepcionais.length > 0 && (
           <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
             <span className="text-purple-500 text-lg">🔄</span>

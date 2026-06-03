@@ -17,6 +17,7 @@
 
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import React from 'react'
 import {
   calcMMenosAtTutor,
   calcMMenosAtAluno,
@@ -29,8 +30,6 @@ import { getCriterios, getLabelTipo } from '@/lib/criterios'
 export const dynamic = 'force-dynamic'
 
 interface Props { searchParams: Promise<{ moduloId?: string }> }
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function n(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—'
@@ -50,7 +49,6 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
   const moduloId = params.moduloId
   if (!moduloId) redirect('/professor/dashboard')
 
-  // ── Busca dados ───────────────────────────────────────────────
   const modulo = await prisma.modulo.findUnique({
     where: { id: moduloId },
     include: {
@@ -66,9 +64,9 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
 
   if (modulo.tutorId !== session?.user?.id) {
     const permissao = await prisma.coTutorPermissao.findFirst({
-        where: { moduloId, tutorId: session?.user?.id },
-        })
-        if (!permissao) redirect('/professor/dashboard')
+      where: { moduloId, tutorId: session?.user?.id },
+    })
+    if (!permissao) redirect('/professor/dashboard')
   }
 
   const [avaliacoesTutor, avaliacoesAluno] = await Promise.all([
@@ -76,8 +74,8 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
     prisma.avaliacaoAluno.findMany({ where: { problema: { moduloId } } }),
   ])
 
-  const alunos  = modulo.matriculas.map((m) => m.usuario)
-  const hoje    = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const alunos = modulo.matriculas.map((m) => m.usuario)
+  const hoje   = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   // ── Cálculo de nota por aluno/problema/tipo ───────────────────
   function calcNota(problemaId: string, alunoId: string, tipo: string) {
@@ -99,9 +97,21 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
       ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes))
       : null
 
+    // IDs de avaliadores com ativCompensatoria — ignorados nos interpares
+    const idsAtivComp = new Set(
+      avaliacoesTutor
+        .filter((t) =>
+          t.problemaId === problemaId &&
+          t.tipoEncontro === tipo &&
+          t.ativCompensatoria
+        )
+        .map((t) => t.avaliadoId)
+    )
+
     const pares = avaliacoesAluno.filter(
       (a) => a.problemaId === problemaId && a.avaliadoId === alunoId
           && a.avaliadorId !== alunoId && a.tipoEncontro === tipo
+          && !idsAtivComp.has(a.avaliadorId)   // ← ignora quem tem ativComp
     )
     const mi = pares.length > 0
       ? pares.reduce((acc, a) =>
@@ -138,9 +148,9 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
       }
     }
 
-    const mediaAb    = notasAb.length > 0 ? arredondar(notasAb.reduce((a, b) => a + b, 0) / notasAb.length) : null
-    const mediaFe    = notasFe.length > 0 ? arredondar(notasFe.reduce((a, b) => a + b, 0) / notasFe.length) : null
-    const notaFinal  = mediaAb !== null && mediaFe !== null ? arredondar(Math.min(mediaAb + mediaFe, 10)) : null
+    const mediaAb   = notasAb.length > 0 ? arredondar(notasAb.reduce((a, b) => a + b, 0) / notasAb.length) : null
+    const mediaFe   = notasFe.length > 0 ? arredondar(notasFe.reduce((a, b) => a + b, 0) / notasFe.length) : null
+    const notaFinal = mediaAb !== null && mediaFe !== null ? arredondar(Math.min(mediaAb + mediaFe, 10)) : null
 
     return { aluno, notas, mediaAb, mediaFe, notaFinal }
   })
@@ -162,11 +172,9 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
 
   return (
     <>
-      {/* ── CSS global para impressão ──────────────────────────── */}
       <style>{`
         * { box-sizing: border-box; }
         body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; background: white; }
-
         .no-print { }
         @media print {
           .no-print { display: none !important; }
@@ -176,30 +184,13 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
           tr { page-break-inside: avoid; }
           thead { display: table-header-group; }
         }
-
         .page { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
-
-        /* Cabeçalho */
         .header { border-bottom: 3px solid #1F4E79; padding-bottom: 12px; margin-bottom: 20px; }
         .header h1 { font-size: 18px; font-weight: bold; color: #1F4E79; margin: 0 0 4px; }
         .header .meta { font-size: 11px; color: #555; display: flex; gap: 24px; flex-wrap: wrap; }
-
-        /* Seção */
         .section { margin-bottom: 32px; }
-        .section-title {
-          background: #1F4E79; color: white;
-          font-size: 12px; font-weight: bold;
-          padding: 6px 12px; margin: 0 0 8px;
-          border-radius: 4px;
-        }
-        .subsection-title {
-          background: #2E75B6; color: white;
-          font-size: 11px; font-weight: bold;
-          padding: 4px 10px; margin: 16px 0 6px;
-          border-radius: 3px;
-        }
-
-        /* Tabelas */
+        .section-title { background: #1F4E79; color: white; font-size: 12px; font-weight: bold; padding: 6px 12px; margin: 0 0 8px; border-radius: 4px; }
+        .subsection-title { background: #2E75B6; color: white; font-size: 11px; font-weight: bold; padding: 4px 10px; margin: 16px 0 6px; border-radius: 3px; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; }
         th { background: #1F4E79; color: white; padding: 5px 6px; text-align: center; font-weight: bold; }
         th.left { text-align: left; }
@@ -207,51 +198,25 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
         td.left { text-align: left; }
         tr:nth-child(even) td { background: #f8f9fb; }
         tr:hover td { background: #eff6ff; }
-
         .nota-final { font-weight: bold; color: #1F4E79; font-size: 11px; }
         .nota-sat { color: #16a34a; font-weight: bold; font-size: 9px; }
         .nota-vazia { color: #9ca3af; }
         .faltou { color: #dc2626; font-size: 9px; font-weight: bold; }
         .comp { color: #16a34a; font-size: 9px; font-weight: bold; }
-
-        /* Legenda */
         .legenda { font-size: 9px; color: #6b7280; margin-top: 6px; line-height: 1.6; }
-
-        /* Botão impressão */
-        .print-btn {
-          position: fixed; top: 16px; right: 16px; z-index: 100;
-          background: #1F4E79; color: white;
-          border: none; padding: 10px 20px;
-          border-radius: 8px; font-size: 13px; font-weight: bold;
-          cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-          display: flex; align-items: center; gap: 8px;
-        }
+        .print-btn { position: fixed; top: 16px; right: 16px; z-index: 100; background: #1F4E79; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; }
         .print-btn:hover { background: #163d61; }
-        .back-btn {
-          position: fixed; top: 16px; left: 16px; z-index: 100;
-          background: white; color: #1F4E79;
-          border: 2px solid #1F4E79; padding: 8px 16px;
-          border-radius: 8px; font-size: 12px; font-weight: bold;
-          cursor: pointer; text-decoration: none;
-          display: flex; align-items: center; gap: 6px;
-        }
+        .back-btn { position: fixed; top: 16px; left: 16px; z-index: 100; background: white; color: #1F4E79; border: 2px solid #1F4E79; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
       `}</style>
 
-      {/* ── Botões (não aparecem na impressão) ────────────────── */}
       <div className="no-print">
-        <a href={`/professor/relatorios?moduloId=${moduloId}`} className="back-btn">
-          ← Voltar
-        </a>
-        <button className="print-btn" onClick={() => window.print()}>
-          🖨️ Imprimir / Salvar PDF
-        </button>
+        <a href={`/professor/relatorios?moduloId=${moduloId}`} className="back-btn">← Voltar</a>
+        <button className="print-btn" onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
       </div>
 
       <div className="page">
 
-        {/* ══════════════════════════════════════════════════════
-            CABEÇALHO
-        ══════════════════════════════════════════════════════ */}
+        {/* CABEÇALHO */}
         <div className="header">
           <h1>Relatório de Notas — {modulo.nome}</h1>
           <div className="meta">
@@ -262,9 +227,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════════
-            SEÇÃO 1 — RESUMO MT (Nota Formativa Final)
-        ══════════════════════════════════════════════════════ */}
+        {/* SEÇÃO 1 — RESUMO MT */}
         <div className="section">
           <div className="section-title">1. Resumo MT — Nota Formativa</div>
           <table>
@@ -272,10 +235,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
               <tr>
                 <th className="left" rowSpan={2}>Aluno</th>
                 {modulo.problemas.map((p) => (
-                  <th
-                    key={p.id}
-                    colSpan={p.temSaltoTriplo ? 3 : 2}
-                  >
+                  <th key={p.id} colSpan={p.temSaltoTriplo ? 3 : 2}>
                     P{p.numero}{p.temSaltoTriplo ? ' (ST)' : ''}
                   </th>
                 ))}
@@ -287,14 +247,11 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                 {modulo.problemas.map((p) =>
                   p.temSaltoTriplo ? (
                     <React.Fragment key={p.id}>
-                      <th>Ab</th>
-                      <th>FeA</th>
-                      <th>FeB</th>
+                      <th>Ab</th><th>FeA</th><th>FeB</th>
                     </React.Fragment>
                   ) : (
                     <React.Fragment key={p.id}>
-                      <th>Ab</th>
-                      <th>Fe</th>
+                      <th>Ab</th><th>Fe</th>
                     </React.Fragment>
                   )
                 )}
@@ -309,24 +266,19 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                     if (!np) return p.temSaltoTriplo
                       ? <React.Fragment key={p.id}><td className="nota-vazia">—</td><td className="nota-vazia">—</td><td className="nota-vazia">—</td></React.Fragment>
                       : <React.Fragment key={p.id}><td className="nota-vazia">—</td><td className="nota-vazia">—</td></React.Fragment>
-
                     const fmtV = (v: any) => {
                       if (v === null || v === undefined) return <span className="nota-vazia">—</span>
                       if (v === 'SATISFATORIO') return <span className="nota-sat">SAT</span>
                       if (typeof v === 'number') return v.toFixed(2)
                       return String(v)
                     }
-
                     return p.temSaltoTriplo ? (
                       <React.Fragment key={p.id}>
-                        <td>{fmtV(np.ab)}</td>
-                        <td>{fmtV(np.fa)}</td>
-                        <td>{fmtV(np.fb)}</td>
+                        <td>{fmtV(np.ab)}</td><td>{fmtV(np.fa)}</td><td>{fmtV(np.fb)}</td>
                       </React.Fragment>
                     ) : (
                       <React.Fragment key={p.id}>
-                        <td>{fmtV(np.ab)}</td>
-                        <td>{fmtV(np.fe)}</td>
+                        <td>{fmtV(np.ab)}</td><td>{fmtV(np.fe)}</td>
                       </React.Fragment>
                     )
                   })}
@@ -342,9 +294,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════════
-            SEÇÃO 2 — DETALHE POR ENCONTRO
-        ══════════════════════════════════════════════════════ */}
+        {/* SEÇÃO 2 — DETALHE POR ENCONTRO */}
         <div className="section page-break">
           <div className="section-title">2. Detalhe por Encontro</div>
 
@@ -352,8 +302,20 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
             const labelTipo = getLabelTipo(tipo as any)
             const criterios = getCriterios(tipo as any)
 
+            // IDs de avaliadores com ativCompensatoria neste encontro
+            // Exibidos na tabela mas EXCLUÍDOS da média interpares
+            const idsAtivCompEncontro = new Set(
+              avaliacoesTutor
+                .filter((t) =>
+                  t.problemaId === prob.id &&
+                  t.tipoEncontro === tipo &&
+                  t.ativCompensatoria
+                )
+                .map((t) => t.avaliadoId)
+            )
+
             return (
-              <div key={`${prob.id}-${tipo}`} className={idx > 0 ? '' : ''}>
+              <div key={`${prob.id}-${tipo}`}>
                 <div className="subsection-title">
                   Problema {prob.numero} — {prob.nome ?? `P${prob.numero}`} · {labelTipo}
                 </div>
@@ -362,50 +324,29 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                   <thead>
                     <tr>
                       <th className="left" rowSpan={2}>Aluno</th>
-
-                      {/* Colunas do Tutor */}
-                      <th colSpan={5} style={{ background: '#1e3a5f' }}>
-                        Tutor
-                      </th>
-
-                      {/* Colunas Auto-avaliação */}
-                      <th colSpan={5} style={{ background: '#0d6b3e' }}>
-                        Auto-avaliação
-                      </th>
-
-                      {/* Colunas Interpares (uma coluna por aluno avaliador) */}
+                      <th colSpan={5} style={{ background: '#1e3a5f' }}>Tutor</th>
+                      <th colSpan={5} style={{ background: '#0d6b3e' }}>Auto-avaliação</th>
                       <th colSpan={alunos.length} style={{ background: '#7c3aed' }}>
                         Interpares (M-At de cada avaliador)
                       </th>
-
                       <th rowSpan={2}>Méd. Inter</th>
-                      <th rowSpan={2} style={{ background: '#1F4E79', minWidth: 52 }}>
-                        Nota Final
-                      </th>
+                      <th rowSpan={2} style={{ background: '#1F4E79', minWidth: 52 }}>Nota Final</th>
                     </tr>
                     <tr>
-                      {/* Tutor sub-headers */}
                       {criterios.map((c) => (
-                        <th key={`t-${c.campo}`} style={{ background: '#274e7a', fontSize: 9 }}>
-                          {c.label}
-                        </th>
+                        <th key={`t-${c.campo}`} style={{ background: '#274e7a', fontSize: 9 }}>{c.label}</th>
                       ))}
                       <th style={{ background: '#274e7a', fontSize: 9 }}>At.</th>
                       <th style={{ background: '#274e7a', fontSize: 9 }}>M-At</th>
-
-                      {/* Auto sub-headers */}
                       {criterios.map((c) => (
-                        <th key={`a-${c.campo}`} style={{ background: '#166534', fontSize: 9 }}>
-                          {c.label}
-                        </th>
+                        <th key={`a-${c.campo}`} style={{ background: '#166534', fontSize: 9 }}>{c.label}</th>
                       ))}
                       <th style={{ background: '#166534', fontSize: 9 }}>At.</th>
                       <th style={{ background: '#166534', fontSize: 9 }}>M-At</th>
-
-                      {/* Interpares: nome abreviado de cada aluno */}
                       {alunos.map((a) => (
                         <th key={`ip-${a.id}`} style={{ background: '#5b21b6', fontSize: 8, maxWidth: 60 }}>
                           {a.nome.split(' ')[0]}
+                          {idsAtivCompEncontro.has(a.id) ? ' ⊘' : ''}
                         </th>
                       ))}
                     </tr>
@@ -434,11 +375,16 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                         ? calcMMenosAtAluno(Number(avSelf.c1), Number(avSelf.c2), Number(avSelf.c3), Number(avSelf.atitudes))
                         : null
 
-                      // interpares de cada colega
+                      // Calcula M-At de cada avaliador
+                      // Avaliadores com ativComp são exibidos com '⊘' mas não entram na média
                       const matParesValues = avaliacoesDoPar.map((av) =>
                         av ? calcMMenosAtAluno(Number(av.c1), Number(av.c2), Number(av.c3), Number(av.atitudes)) : null
                       )
-                      const matParesNumeric = matParesValues.filter((v): v is number => v !== null)
+
+                      // Média interpares: exclui avaliadores com ativCompensatoria
+                      const matParesNumeric = matParesValues.filter((v, i): v is number =>
+                        v !== null && !idsAtivCompEncontro.has(alunos[i]?.id)
+                      )
                       const mediaPares = matParesNumeric.length > 0
                         ? matParesNumeric.reduce((a, b) => a + b, 0) / matParesNumeric.length
                         : null
@@ -487,14 +433,17 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                               return <td key={`ip-${vIdx}`} style={{ background: '#f3f4f6', color: '#9ca3af', fontSize: 9 }}>—</td>
                             }
                             const v = matParesValues[vIdx]
+                            const eAtivComp = idsAtivCompEncontro.has(avaliador.id)
                             return (
-                              <td key={`ip-${vIdx}`} style={{ color: '#5b21b6' }}>
-                                {v !== null ? v.toFixed(2) : <span className="nota-vazia">—</span>}
+                              <td key={`ip-${vIdx}`} style={{ color: eAtivComp ? '#9ca3af' : '#5b21b6' }}>
+                                {v !== null
+                                  ? <>{v.toFixed(2)}{eAtivComp && <span style={{ fontSize: 8 }}> ⊘</span>}</>
+                                  : <span className="nota-vazia">—</span>}
                               </td>
                             )
                           })}
 
-                          {/* Média interpares */}
+                          {/* Média interpares (sem ativComp) */}
                           <td style={{ fontWeight: 600, color: '#7c3aed' }}>
                             {mediaPares !== null ? mediaPares.toFixed(2) : '—'}
                           </td>
@@ -511,26 +460,24 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                   </tbody>
                 </table>
 
-                {/* Legenda dos critérios */}
                 <div className="legenda">
                   {criterios.map((c) => `${c.label} = ${c.nome}`).join(' · ')}
                   {' · '}At. = Atitudes (0–1)
                   {' · '}M-At = Média − Atitudes
-                  {' · '}Nota Final = (Inter×0,5 + Auto×0,5 + Tutor×4) / {/* */}5 (ou /4,5 sem auto)
+                  {' · '}Nota Final = (Inter×0,5 + Auto×0,5 + Tutor×4) / 5 (ou /4,5 sem auto)
+                  {' · '}⊘ = Atividade Compensatória (excluído da média interpares)
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* ── Rodapé ────────────────────────────────────────── */}
+        {/* Rodapé */}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 8, marginTop: 24, fontSize: 9, color: '#9ca3af', textAlign: 'center' }}>
           TutoriaAvalia v2 · CESUPA · Relatório gerado em {hoje} · {modulo.nome} · {modulo.tutoria} · Turma {modulo.turma} · {modulo.ano}
         </div>
 
       </div>
-
-
     </>
   )
 }
