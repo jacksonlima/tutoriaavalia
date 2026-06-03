@@ -26,6 +26,7 @@ import {
   fmt2,
 } from '@/lib/notas'
 import { getCriterios, getLabelTipo } from '@/lib/criterios'
+import { PrintButton } from '@/components/ui/PrintButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -211,7 +212,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
 
       <div className="no-print">
         <a href={`/professor/relatorios?moduloId=${moduloId}`} className="back-btn">← Voltar</a>
-        <button className="print-btn" onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
+        <PrintButton />
       </div>
 
       <div className="page">
