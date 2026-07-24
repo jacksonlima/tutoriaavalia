@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Exportação PDF / Impressão do Módulo
+ * Notas da Tutoria v2 — Exportação PDF / Impressão do Módulo
  * Autor: Jackson Lima — CESUPA
  *
  * Página otimizada para impressão e exportação em PDF.
@@ -475,7 +475,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
 
         {/* Rodapé */}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 8, marginTop: 24, fontSize: 9, color: '#9ca3af', textAlign: 'center' }}>
-          TutoriaAvalia v2 · CESUPA · Relatório gerado em {hoje} · {modulo.nome} · {modulo.tutoria} · Turma {modulo.turma} · {modulo.ano}
+          Notas da Tutoria v2 · CESUPA · Relatório gerado em {hoje} · {modulo.nome} · {modulo.tutoria} · Turma {modulo.turma} · {modulo.ano}
         </div>
 
       </div>

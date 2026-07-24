@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Seed Específico
+ * Notas da Tutoria v2 — Seed Específico
  * Autor: Jackson Lima — CESUPA
  *
  * Módulo: I - Introdução ao Estudo da Medicina
@@ -96,7 +96,7 @@ async function apagarModulosExistentes(tutorId: string) {
 
 async function main() {
   console.log('═══════════════════════════════════════════════════════')
-  console.log('  TutoriaAvalia — Seed: I - Introdução ao Estudo da Medicina')
+  console.log('  Notas da Tutoria — Seed: I - Introdução ao Estudo da Medicina')
   console.log('═══════════════════════════════════════════════════════\n')
 
   // ── Tutor ────────────────────────────────────────────────────

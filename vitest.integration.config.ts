@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Configuração Vitest (Testes de Integração)
+ * Notas da Tutoria v2 — Configuração Vitest (Testes de Integração)
  * Autor: Jackson Lima — CESUPA
  *
  * A opção `env` do Vitest injeta variáveis ANTES de qualquer import de módulo.

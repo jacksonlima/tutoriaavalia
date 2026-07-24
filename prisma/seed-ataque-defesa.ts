@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Seed Específico
+ * Notas da Tutoria v2 — Seed Específico
  * Autor: Jackson Lima — CESUPA
  *
  * Módulo: III - Ataque e Defesa
@@ -101,7 +101,7 @@ async function apagarModuloExistente(tutorId: string) {
 
 async function main() {
   console.log('═══════════════════════════════════════════════════════')
-  console.log('  TutoriaAvalia — Seed: III - Ataque e Defesa')
+  console.log('  Notas da Tutoria — Seed: III - Ataque e Defesa')
   console.log('═══════════════════════════════════════════════════════\n')
 
   // ── Tutor ────────────────────────────────────────────────────

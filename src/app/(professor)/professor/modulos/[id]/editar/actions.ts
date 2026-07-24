@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Server Actions: Editar Módulo
+ * Notas da Tutoria v2 — Server Actions: Editar Módulo
  * Autor: Jackson Lima — CESUPA
  *
  * Implementa segurança em 3 camadas:

@@ -136,7 +136,7 @@ export default async function DevLoginPage({
         )}
 
         <p className="text-center text-gray-600 text-xs mt-8">
-          TutoriaAvalia — Modo Desenvolvimento
+          Notas da Tutoria — Modo Desenvolvimento
         </p>
       </div>
     </main>

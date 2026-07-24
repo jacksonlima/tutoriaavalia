@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Sistema de Avaliação Formativa para ABP
+ * Notas da Tutoria v2 — Sistema de Avaliação Formativa para ABP
  * Autor: Jackson Lima — CESUPA
  *
  * TopBar — barra superior do sistema.
@@ -40,7 +40,7 @@ export function TopBar({ nome, papel, backHref, backLabel = 'Voltar' }: TopBarPr
           <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
             <span className="text-xs font-bold">TA</span>
           </div>
-          <span className="font-semibold text-sm hidden sm:block">TutoriaAvalia</span>
+          <span className="font-semibold text-sm hidden sm:block">Notas da Tutoria</span>
         </Link>
       </div>
 

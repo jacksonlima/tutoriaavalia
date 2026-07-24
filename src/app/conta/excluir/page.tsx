@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Exclusão de Conta
+ * Notas da Tutoria v2 — Exclusão de Conta
  * Autor: Jackson Lima — CESUPA
  *
  * Permite que o próprio usuário solicite e confirme a exclusão
@@ -71,7 +71,7 @@ export default function ExcluirContaPage() {
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <span className="text-xs font-bold">TA</span>
             </div>
-            <span className="font-semibold">TutoriaAvalia</span>
+            <span className="font-semibold">Notas da Tutoria</span>
           </div>
           <Link
             href={session?.user?.papel === 'TUTOR' ? '/professor/dashboard' : '/aluno/dashboard'}

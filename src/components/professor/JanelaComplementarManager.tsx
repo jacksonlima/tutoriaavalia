@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * TutoriaAvalia v2 — Componente: Gerenciador de Janela Complementar
+ * Notas da Tutoria v2 — Componente: Gerenciador de Janela Complementar
  * Autor: Jackson Lima — CESUPA
  *
  * Permite ao professor:

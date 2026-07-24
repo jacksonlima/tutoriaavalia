@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — GET /api/encontros-especiais/grupo?problemaId=X&tipoEncontro=Y
+ * Notas da Tutoria v2 — GET /api/encontros-especiais/grupo?problemaId=X&tipoEncontro=Y
  *
  * Retorna o grupo efetivo para um encontro, incluindo alunos visitantes
  * realocados via Situação Excepcional.

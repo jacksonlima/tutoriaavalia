@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Política de Privacidade
+ * Notas da Tutoria v2 — Política de Privacidade
  * Autor: Jackson Lima — CESUPA
  *
  * Página pública (sem autenticação) em conformidade com:
@@ -13,8 +13,8 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Política de Privacidade — TutoriaAvalia',
-  description: 'Política de Privacidade e proteção de dados do TutoriaAvalia conforme a LGPD.',
+  title: 'Política de Privacidade — Notas da Tutoria',
+  description: 'Política de Privacidade e proteção de dados do Notas da Tutoria conforme a LGPD.',
 }
 
 const ULTIMA_ATUALIZACAO = '18 de abril de 2026'
@@ -33,7 +33,7 @@ export default function PoliticaPrivacidade() {
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <span className="text-xs font-bold">TA</span>
             </div>
-            <span className="font-semibold">TutoriaAvalia</span>
+            <span className="font-semibold">Notas da Tutoria</span>
           </div>
           <Link href="/login" className="text-sm text-blue-200 hover:text-white transition-colors">
             ← Voltar ao login
@@ -52,7 +52,7 @@ export default function PoliticaPrivacidade() {
             Última atualização: {ULTIMA_ATUALIZACAO}
           </p>
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-            Esta política explica como o <strong>TutoriaAvalia</strong> coleta, usa e protege seus
+            Esta política explica como o <strong>Notas da Tutoria</strong> coleta, usa e protege seus
             dados pessoais, em conformidade com a Lei Geral de Proteção de Dados Pessoais
             (LGPD — Lei n° 13.709/2018).
           </div>
@@ -64,7 +64,7 @@ export default function PoliticaPrivacidade() {
           <section>
             <h2 className="text-xl font-bold text-[#1F4E79] mb-3">1. Quem somos</h2>
             <p className="leading-relaxed">
-              O <strong>TutoriaAvalia</strong> é um sistema de atribuição de notas da avaliação formativa para o método
+              O <strong>Notas da Tutoria</strong> é um sistema de atribuição de notas da avaliação formativa para o método
               de Aprendizagem Baseada em Problemas (ABP), desenvolvido pelos Professores{' '}
               <strong>Jackson Cordeiro Lima e Bruno Vinícius da Silva Pinheiro</strong> para uso acadêmico no Curso de Medicina{' '}
               <strong>{INSTITUICAO}</strong>.
@@ -326,7 +326,7 @@ export default function PoliticaPrivacidade() {
 
         {/* Rodapé */}
         <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-400">
-          TutoriaAvalia v2 · {INSTITUICAO} · Última atualização: {ULTIMA_ATUALIZACAO}
+          Notas da Tutoria v2 · {INSTITUICAO} · Última atualização: {ULTIMA_ATUALIZACAO}
         </div>
 
       </main>

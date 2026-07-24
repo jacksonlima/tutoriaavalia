@@ -15,7 +15,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        // Paleta principal TutoriaAvalia
+        // Paleta principal Notas da Tutoria
         primary: {
           DEFAULT: '#1F4E79',
           foreground: '#ffffff',

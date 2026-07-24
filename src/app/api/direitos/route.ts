@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Canal de Exercício de Direitos LGPD
+ * Notas da Tutoria v2 — API: Canal de Exercício de Direitos LGPD
  * Autor: Jackson Lima — CESUPA
  *
  * POST /api/direitos

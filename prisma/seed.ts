@@ -57,7 +57,7 @@ async function criarProblemas(moduloId: string, probs: any[]) {
 // ─────────────────────────────────────────────────────────────────
 async function main() {
   console.log('═══════════════════════════════════════════════════════')
-  console.log('  TutoriaAvalia — Seed de Ambiente de Testes')
+  console.log('  Notas da Tutoria — Seed de Ambiente de Testes')
   console.log('═══════════════════════════════════════════════════════\n')
 
   await limparTudo()

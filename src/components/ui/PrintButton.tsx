@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * TutoriaAvalia v2 — Botão de Impressão
+ * Notas da Tutoria v2 — Botão de Impressão
  * Client Component isolado para o window.print() na página de exportação.
  * Necessário porque exportar/page.tsx é um Server Component.
  */

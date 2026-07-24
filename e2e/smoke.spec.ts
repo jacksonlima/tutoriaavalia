@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Testes E2E: Smoke Tests
+ * Notas da Tutoria v2 — Testes E2E: Smoke Tests
  * Autor: Jackson Lima — CESUPA
  *
  * Verifica que as páginas principais carregam corretamente.
@@ -16,7 +16,7 @@ test.describe('Páginas públicas', () => {
 
   test('página de login carrega corretamente', async ({ page }) => {
     await page.goto('/login')
-    await expect(page.getByText('TutoriaAvalia')).toBeVisible()
+    await expect(page.getByText('Notas da Tutoria')).toBeVisible()
     await expect(page.getByText('Entrar com Google')).toBeVisible()
     await expect(page.getByText('Política de Privacidade')).toBeVisible()
   })

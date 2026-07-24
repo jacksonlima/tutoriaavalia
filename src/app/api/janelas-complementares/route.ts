@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Janelas de Avaliação Complementar
+ * Notas da Tutoria v2 — API: Janelas de Avaliação Complementar
  * Autor: Jackson Lima — CESUPA
  *
  * GET  /api/janelas-complementares?problemaId=X&tipoEncontro=Y

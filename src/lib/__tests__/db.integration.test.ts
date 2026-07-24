@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Testes de Integração: Banco de Dados
+ * Notas da Tutoria v2 — Testes de Integração: Banco de Dados
  * Autor: Jackson Lima — CESUPA
  *
  * Testa as operações Prisma + PostgreSQL reais.

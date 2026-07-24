@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Co-tutores (v2)
+ * Notas da Tutoria v2 — API: Co-tutores (v2)
  * Autor: Jackson Lima — CESUPA
  *
  * Permissões granulares: cada registro = (módulo, tutor, problema, tipoEncontro)

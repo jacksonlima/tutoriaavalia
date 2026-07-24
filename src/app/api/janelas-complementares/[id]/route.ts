@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Gerenciar Janela Complementar específica
+ * Notas da Tutoria v2 — API: Gerenciar Janela Complementar específica
  * Autor: Jackson Lima — CESUPA
  *
  * PATCH /api/janelas-complementares/[id]

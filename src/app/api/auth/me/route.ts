@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — GET /api/auth/me
+ * Notas da Tutoria v2 — GET /api/auth/me
  * Autor: Jackson Lima — CESUPA
  *
  * Retorna os dados do usuário logado.

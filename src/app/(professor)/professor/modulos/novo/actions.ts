@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Server Actions: Criar Módulo
+ * Notas da Tutoria v2 — Server Actions: Criar Módulo
  * Autor: Jackson Lima — CESUPA
  *
  * 'use server' transforma estas funções em endpoints seguros do servidor.

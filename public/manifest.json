@@ -1,6 +1,6 @@
 {
-  "name": "TutoriaAvalia",
-  "short_name": "TutoriaAvalia",
+  "name": "Notas da Tutoria",
+  "short_name": "Notas da Tutoria",
   "description": "Sistema de Avaliação Formativa para ABP",
   "start_url": "/",
   "display": "standalone",

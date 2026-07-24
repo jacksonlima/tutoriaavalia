@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API de login de desenvolvimento
+ * Notas da Tutoria v2 — API de login de desenvolvimento
  * Autor: Jackson Lima — CESUPA
  *
  * POST /api/dev/login  (form body: email=xxx)

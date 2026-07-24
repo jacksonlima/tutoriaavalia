@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * TutoriaAvalia v2 — Página de Avaliação do Aluno
+ * Notas da Tutoria v2 — Página de Avaliação do Aluno
  * Autor: Jackson Lima — CESUPA
  *
  * Modos:

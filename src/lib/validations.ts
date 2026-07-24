@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2
+ * Notas da Tutoria v2
  * Autor: Jackson Lima — CESUPA
  * Sistema de avaliação formativa para Aprendizagem Baseada em Problemas (ABP)
  *

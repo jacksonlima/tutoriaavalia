@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Avaliações do Aluno (interpares + auto-avaliação)
+ * Notas da Tutoria v2 — API: Avaliações do Aluno (interpares + auto-avaliação)
  * Autor: Jackson Lima — CESUPA
  *
  * REGRAS:

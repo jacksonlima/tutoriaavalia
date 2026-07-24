@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Configuração Vitest (Testes Unitários)
+ * Notas da Tutoria v2 — Configuração Vitest (Testes Unitários)
  * Autor: Jackson Lima — CESUPA
  *
  * Roda: npm run test:run

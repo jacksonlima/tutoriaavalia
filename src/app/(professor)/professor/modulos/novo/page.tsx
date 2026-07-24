@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * TutoriaAvalia v2 — Página de criação de novo módulo
+ * Notas da Tutoria v2 — Página de criação de novo módulo
  * Autor: Jackson Lima — CESUPA
  */
 

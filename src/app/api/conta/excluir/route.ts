@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Exclusão de Conta
+ * Notas da Tutoria v2 — API: Exclusão de Conta
  * Autor: Jackson Lima — CESUPA
  *
  * DELETE /api/conta/excluir

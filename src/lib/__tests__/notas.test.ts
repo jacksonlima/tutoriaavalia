@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Testes Unitários: Cálculo de Notas
+ * Notas da Tutoria v2 — Testes Unitários: Cálculo de Notas
  * Autor: Jackson Lima — CESUPA
  *
  * Testa as funções de notas.ts que implementam as fórmulas da planilha.

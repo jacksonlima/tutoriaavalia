@@ -7,7 +7,7 @@ import { Toaster } from '@/components/ui/toaster'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TutoriaAvalia',
+  title: 'Notas da Tutoria',
   description: 'Sistema de avaliação formativa para ABP — Aprendizagem Baseada em Problemas',
   manifest: '/manifest.json',
 }

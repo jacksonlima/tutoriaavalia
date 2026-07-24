@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2
+ * Notas da Tutoria v2
  * Autor: Jackson Lima — CESUPA
  *
  * GET  /api/notificacoes  — lista notificações do tutor logado

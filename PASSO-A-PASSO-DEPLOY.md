@@ -1,4 +1,4 @@
-# TutoriaAvalia v2 — Passo a Passo Completo
+# Notas da Tutoria v2 — Passo a Passo Completo
 
 **Autor:** Jackson Lima — CESUPA  
 **Atualizado:** Março 2026
@@ -49,7 +49,7 @@ cd tutoriaavalia
 git init
 git remote add origin https://github.com/SEU_USUARIO/tutoriaavalia.git
 git add .
-git commit -m "feat: TutoriaAvalia v2 — versão completa"
+git commit -m "feat: Notas da Tutoria v2 — versão completa"
 git branch -M main
 git push -u origin main
 ```

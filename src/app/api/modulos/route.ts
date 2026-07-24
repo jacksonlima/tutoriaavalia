@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — API: Módulos (v2)
+ * Notas da Tutoria v2 — API: Módulos (v2)
  * Autor: Jackson Lima — CESUPA
  *
  * Correções de segurança:

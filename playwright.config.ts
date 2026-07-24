@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Configuração Playwright (Testes E2E)
+ * Notas da Tutoria v2 — Configuração Playwright (Testes E2E)
  * Autor: Jackson Lima — CESUPA
  *
  * webServer.env garante que as variáveis de ambiente cheguem

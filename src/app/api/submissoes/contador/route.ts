@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Sistema de Avaliação Formativa para ABP
+ * Notas da Tutoria v2 — Sistema de Avaliação Formativa para ABP
  * Autor: Jackson Lima — CESUPA
  *
  * GET /api/submissoes/contador?moduloId=X

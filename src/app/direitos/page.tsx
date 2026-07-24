@@ -1,5 +1,5 @@
 /**
- * TutoriaAvalia v2 — Canal de Exercício de Direitos LGPD
+ * Notas da Tutoria v2 — Canal de Exercício de Direitos LGPD
  * Autor: Jackson Lima — CESUPA
  *
  * Formulário para que titulares solicitem acesso, correção,
@@ -66,7 +66,7 @@ export default function DireitosPage() {
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <span className="text-xs font-bold">TA</span>
             </div>
-            <span className="font-semibold">TutoriaAvalia</span>
+            <span className="font-semibold">Notas da Tutoria</span>
           </div>
           <Link href="/privacidade" className="text-sm text-blue-200 hover:text-white">
             Política de Privacidade
