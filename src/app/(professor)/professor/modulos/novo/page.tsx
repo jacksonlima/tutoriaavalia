@@ -105,12 +105,12 @@ export default function NovoModuloPage() {
   }
 
   const selectClass = (hasError?: boolean) =>
-    `w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2E75B6] ${
+    `w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3A50C8] ${
       hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
     }`
 
   const inputClass = (hasError?: boolean) =>
-    `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6] ${
+    `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8] ${
       hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
     }`
 
@@ -120,7 +120,7 @@ export default function NovoModuloPage() {
       <main className="max-w-2xl mx-auto px-4 py-6">
 
         <div className="mb-5">
-          <h1 className="text-xl font-bold text-[#1F4E79]">Novo Módulo</h1>
+          <h1 className="text-xl font-bold text-[#1B2280]">Novo Módulo</h1>
           <p className="text-sm text-gray-500">Preencha os dados e configure o módulo</p>
         </div>
 
@@ -282,7 +282,7 @@ export default function NovoModuloPage() {
               <input
                 {...register('quantidadeProblemas', { valueAsNumber: true })}
                 type="number" min={1} max={20}
-                className={`w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6] ${
+                className={`w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8] ${
                   errors.quantidadeProblemas ? 'border-red-400' : 'border-gray-300'
                 }`}
               />
@@ -309,7 +309,7 @@ export default function NovoModuloPage() {
                     }
                   }}
                   className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    temSalto ? 'bg-[#1F4E79]' : 'bg-gray-300'
+                    temSalto ? 'bg-[#1B2280]' : 'bg-gray-300'
                   }`}
                 >
                   <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
@@ -332,7 +332,7 @@ export default function NovoModuloPage() {
                     <input
                       {...register('quantidadeSaltos', { valueAsNumber: true })}
                       type="number" min={1} max={qtdProblemas}
-                      className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
+                      className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8]"
                     />
                   </div>
 
@@ -354,8 +354,8 @@ export default function NovoModuloPage() {
                               onClick={() => toggleSalto(numProb)}
                               className={`w-10 h-10 rounded-lg text-sm font-bold border-2 transition-all ${
                                 selecionado
-                                  ? 'bg-[#1F4E79] text-white border-[#1F4E79] shadow-sm'
-                                  : 'bg-white text-gray-600 border-gray-300 hover:border-[#2E75B6]'
+                                  ? 'bg-[#1B2280] text-white border-[#1B2280] shadow-sm'
+                                  : 'bg-white text-gray-600 border-gray-300 hover:border-[#3A50C8]'
                               }`}
                             >
                               {numProb}
@@ -364,7 +364,7 @@ export default function NovoModuloPage() {
                         })}
                       </div>
                       {(problemasSalto ?? []).length > 0 && (
-                        <p className="text-xs text-[#1F4E79] mt-2 font-medium">
+                        <p className="text-xs text-[#1B2280] mt-2 font-medium">
                           Salto Triplo nos problemas: {[...(problemasSalto ?? [])].sort((a, b) => a - b).join(', ')}
                         </p>
                       )}
@@ -395,7 +395,7 @@ export default function NovoModuloPage() {
                             P{String(numProb).padStart(2, '0')}
                           </span>
                           {comSalto && (
-                            <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-xs bg-[#1B2280] text-white px-1.5 py-0.5 rounded font-bold">
                               ST
                             </span>
                           )}
@@ -403,7 +403,7 @@ export default function NovoModuloPage() {
                         <input
                           {...register(('nomesProblemas.' + i) as any)}
                           placeholder={'Problema ' + String(numProb).padStart(2, '0')}
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#2E75B6]"
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3A50C8]"
                         />
                       </div>
                     )
@@ -423,7 +423,7 @@ export default function NovoModuloPage() {
             </button>
             <button
               type="submit" disabled={salvando}
-              className="flex-1 bg-[#1F4E79] text-white px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:bg-[#163d61] transition-colors"
+              className="flex-1 bg-[#1B2280] text-white px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:bg-[#141967] transition-colors"
             >
               {salvando ? (
                 <span className="flex items-center gap-2">

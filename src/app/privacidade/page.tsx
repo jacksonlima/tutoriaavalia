@@ -27,7 +27,7 @@ export default function PoliticaPrivacidade() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Cabeçalho */}
-      <header className="bg-[#1F4E79] text-white px-4 py-4">
+      <header className="bg-[#1B2280] text-white px-4 py-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -45,7 +45,7 @@ export default function PoliticaPrivacidade() {
 
         {/* Título */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#1F4E79] mb-2">
+          <h1 className="text-3xl font-bold text-[#1B2280] mb-2">
             Política de Privacidade
           </h1>
           <p className="text-sm text-gray-500">
@@ -62,7 +62,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 1. Quem somos */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">1. Quem somos</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">1. Quem somos</h2>
             <p className="leading-relaxed">
               O <strong>Notas da Tutoria</strong> é um sistema de atribuição de notas da avaliação formativa para o método
               de Aprendizagem Baseada em Problemas (ABP), desenvolvido pelos Professores{' '}
@@ -77,7 +77,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 2. Dados coletados */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">2. Quais dados coletamos</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">2. Quais dados coletamos</h2>
             <div className="space-y-4">
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h3 className="font-semibold text-gray-800 mb-2">Dados de identificação</h3>
@@ -113,11 +113,11 @@ export default function PoliticaPrivacidade() {
 
           {/* 3. Finalidade */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">3. Para que usamos seus dados</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">3. Para que usamos seus dados</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
                 <thead>
-                  <tr className="bg-[#1F4E79] text-white">
+                  <tr className="bg-[#1B2280] text-white">
                     <th className="text-left px-4 py-3">Dado</th>
                     <th className="text-left px-4 py-3">Finalidade</th>
                     <th className="text-left px-4 py-3">Base legal (LGPD)</th>
@@ -144,7 +144,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 4. Compartilhamento */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">4. Compartilhamento de dados</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">4. Compartilhamento de dados</h2>
             <p className="leading-relaxed mb-3">
               Seus dados <strong>não são vendidos nem compartilhados com terceiros</strong> para
               fins comerciais. O sistema compartilha dados apenas nas seguintes situações:
@@ -179,7 +179,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 5. Retenção */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">5. Por quanto tempo guardamos seus dados</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">5. Por quanto tempo guardamos seus dados</h2>
             <div className="space-y-3 text-sm">
               <div className="flex gap-3 bg-white border border-gray-200 rounded-xl p-4">
                 <span className="text-2xl">📚</span>
@@ -218,7 +218,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 6. Direitos */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">6. Seus direitos (Art. 18° da LGPD)</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">6. Seus direitos (Art. 18° da LGPD)</h2>
             <p className="text-sm leading-relaxed mb-4">
               Você tem os seguintes direitos em relação aos seus dados pessoais:
             </p>
@@ -258,7 +258,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 7. Segurança */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">7. Como protegemos seus dados</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">7. Como protegemos seus dados</h2>
             <ul className="space-y-2 text-sm">
               {[
                 'Autenticação via Google OAuth — nenhuma senha é armazenada no sistema',
@@ -278,7 +278,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 8. Encarregado */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">8. Encarregado de Dados (DPO)</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">8. Encarregado de Dados (DPO)</h2>
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-sm leading-relaxed">
                 Nos termos do Art. 41° da LGPD, o Encarregado de Dados (DPO) responsável
@@ -288,7 +288,7 @@ export default function PoliticaPrivacidade() {
                 <p><strong>Nome:</strong> {NOME_DPO}</p>
                 <p>
                   <strong>E-mail:</strong>{' '}
-                  <a href={`mailto:${EMAIL_DPO}`} className="text-[#1F4E79] underline">
+                  <a href={`mailto:${EMAIL_DPO}`} className="text-[#1B2280] underline">
                     {EMAIL_DPO}
                   </a>
                 </p>
@@ -300,12 +300,12 @@ export default function PoliticaPrivacidade() {
 
           {/* 9. Contato ANPD */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">9. Contato com a ANPD</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">9. Contato com a ANPD</h2>
             <p className="text-sm leading-relaxed">
               Se você acredita que seus direitos não foram atendidos, você pode contatar a
               Autoridade Nacional de Proteção de Dados (ANPD) pelo portal{' '}
               <a href="https://www.gov.br/anpd" target="_blank" rel="noopener noreferrer"
-                className="text-[#1F4E79] underline">
+                className="text-[#1B2280] underline">
                 www.gov.br/anpd
               </a>.
             </p>
@@ -313,7 +313,7 @@ export default function PoliticaPrivacidade() {
 
           {/* 10. Alterações */}
           <section>
-            <h2 className="text-xl font-bold text-[#1F4E79] mb-3">10. Alterações nesta Política</h2>
+            <h2 className="text-xl font-bold text-[#1B2280] mb-3">10. Alterações nesta Política</h2>
             <p className="text-sm leading-relaxed">
               Esta política pode ser atualizada periodicamente. Alterações relevantes serão
               comunicadas aos usuários por e-mail institucional com pelo menos 10 dias de

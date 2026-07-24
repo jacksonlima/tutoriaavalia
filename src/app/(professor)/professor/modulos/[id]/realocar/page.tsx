@@ -165,7 +165,7 @@ function RealocarPageInner() {
   if (carregando) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#1B2280] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -202,7 +202,7 @@ function RealocarPageInner() {
 
         {/* ── Cabeçalho ── */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h1 className="text-xl font-bold text-[#1F4E79] mb-1">
+          <h1 className="text-xl font-bold text-[#1B2280] mb-1">
             🔄 Situações Excepcionais
           </h1>
           <p className="text-sm font-medium text-gray-700">
@@ -215,7 +215,7 @@ function RealocarPageInner() {
             Redistribua seus alunos entre os outros professores <strong>deste mesmo módulo</strong>.
             As notas serão calculadas automaticamente na nota formativa de cada aluno.
             <br />
-            <span className="font-medium text-[#1F4E79]">
+            <span className="font-medium text-[#1B2280]">
               Pesos: Professor × 4 · Avaliação Interpares × 0,5 · Auto-avaliação × 0,5
             </span>
           </p>
@@ -293,7 +293,7 @@ function RealocarPageInner() {
 
         {/* ── Nova realocação ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="bg-[#1F4E79] px-4 py-3">
+          <div className="bg-[#1B2280] px-4 py-3">
             <h2 className="text-white text-sm font-semibold">
               Nova realocação — {alunos.length} alunos × tipos de encontro
             </h2>
@@ -311,7 +311,7 @@ function RealocarPageInner() {
             <input type="text" value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
               placeholder="Ex: Falta do professor por motivo de saúde — 15/04/2025"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1F4E79]"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2280]"
             />
           </div>
 
@@ -389,7 +389,7 @@ function RealocarPageInner() {
                 : 'Nenhuma alocação pendente'}
             </p>
             <button type="button" disabled={salvando || pendentes === 0} onClick={salvar}
-              className="bg-[#1F4E79] hover:bg-[#163d61] text-white px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-colors">
+              className="bg-[#1B2280] hover:bg-[#141967] text-white px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-colors">
               {salvando ? 'Salvando...' : `💾 Salvar${pendentes > 0 ? ` (${pendentes})` : ''}`}
             </button>
           </div>
@@ -422,7 +422,7 @@ function CascadeSelect({
       {/* Tutoria (Professor) */}
       <select value={tutoriaSel}
         onChange={(e) => { setTutoriaSel(e.target.value); onSelect(e.target.value, '') }}
-        className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1F4E79] min-w-48"
+        className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B2280] min-w-48"
       >
         <option value="">— Professor destino —</option>
         {tutoriasPares.map((t) => (
@@ -436,7 +436,7 @@ function CascadeSelect({
       {tutoriaSel && (
         <select value={value}
           onChange={(e) => onSelect(tutoriaSel, e.target.value)}
-          className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1F4E79] min-w-40"
+          className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B2280] min-w-40"
         >
           <option value="">— Problema —</option>
           {problemas.map((p) => (
@@ -460,7 +460,7 @@ export default function Page() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#1B2280] border-t-transparent rounded-full animate-spin" />
       </div>
     }>
       <RealocarPageInner />

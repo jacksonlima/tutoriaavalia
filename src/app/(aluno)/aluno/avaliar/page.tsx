@@ -45,7 +45,7 @@ function DropdownNota({
       value={valor}
       onChange={(e) => onChange(parseFloat(e.target.value))}
       disabled={disabled}
-      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base bg-white focus:outline-none focus:ring-2 focus:ring-[#2E75B6] disabled:bg-gray-50 disabled:text-gray-300 cursor-pointer"
+      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base bg-white focus:outline-none focus:ring-2 focus:ring-[#3A50C8] disabled:bg-gray-50 disabled:text-gray-300 cursor-pointer"
     >
       {opcoes.map((op) => (
         <option key={op} value={op}>{op.toFixed(1)}</option>
@@ -260,7 +260,7 @@ function AlunoAvaliarContent() {
           </p>
           <button
             onClick={() => router.push('/aluno/dashboard')}
-            className="bg-[#1F4E79] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
+            className="bg-[#1B2280] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
           >
             Voltar ao início
           </button>
@@ -318,7 +318,7 @@ function AlunoAvaliarContent() {
                       {criterios.map((c) => (
                         <div key={c.campo} className="flex items-center justify-between text-xs">
                           <span className="text-gray-500">
-                            <span className="font-semibold text-[#1F4E79]">{c.label}</span>
+                            <span className="font-semibold text-[#1B2280]">{c.label}</span>
                             {' '}— {c.nome.length > 40 ? c.nome.substring(0, 40) + '...' : c.nome}
                           </span>
                           <span className="font-bold text-gray-800 ml-2 shrink-0">
@@ -328,7 +328,7 @@ function AlunoAvaliarContent() {
                       ))}
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-500">
-                          <span className="font-semibold text-[#1F4E79]">Atitudes</span>
+                          <span className="font-semibold text-[#1B2280]">Atitudes</span>
                         </span>
                         <span className="font-bold text-gray-800 ml-2">
                           {Number(n.atitudes ?? 0).toFixed(1)}
@@ -336,7 +336,7 @@ function AlunoAvaliarContent() {
                       </div>
                     </div>
                     <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
-                      M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
+                      M−At = <span className="font-bold text-[#1B2280]">{calcMAt(n)}</span>
                     </div>
                   </div>
                 )
@@ -346,7 +346,7 @@ function AlunoAvaliarContent() {
 
           <button
             onClick={() => router.push('/aluno/dashboard')}
-            className="w-full bg-[#1F4E79] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
+            className="w-full bg-[#1B2280] text-white px-6 py-2.5 rounded-lg text-sm font-medium"
           >
             Voltar ao início
           </button>
@@ -362,7 +362,7 @@ function AlunoAvaliarContent() {
         <TopBar nome={session?.user?.nome ?? ''} papel="ALUNO" />
         <main className="max-w-lg mx-auto px-4 py-6">
           <div className="mb-5">
-            <h1 className="text-xl font-bold text-[#1F4E79]">Revise antes de enviar</h1>
+            <h1 className="text-xl font-bold text-[#1B2280]">Revise antes de enviar</h1>
             <p className="text-sm text-gray-400">{nomeProblem} — {labelTipo}</p>
             {tardioIncompleto && (
               <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
@@ -396,7 +396,7 @@ function AlunoAvaliarContent() {
                     {criterios.map((c) => (
                       <div key={c.campo} className="flex items-center justify-between text-xs">
                         <span className="text-gray-500">
-                          <span className="font-semibold text-[#1F4E79]">{c.label}</span>
+                          <span className="font-semibold text-[#1B2280]">{c.label}</span>
                           {' '}— {c.nome.length > 50 ? c.nome.substring(0, 50) + '...' : c.nome}
                         </span>
                         <span className="font-bold text-gray-800 ml-2 shrink-0">
@@ -406,7 +406,7 @@ function AlunoAvaliarContent() {
                     ))}
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-500">
-                        <span className="font-semibold text-[#1F4E79]">Atitudes</span>
+                        <span className="font-semibold text-[#1B2280]">Atitudes</span>
                       </span>
                       <span className="font-bold text-gray-800 ml-2">
                         {Number(n.atitudes ?? 0).toFixed(1)}
@@ -414,7 +414,7 @@ function AlunoAvaliarContent() {
                     </div>
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-100 text-right text-xs text-gray-400">
-                    M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
+                    M−At = <span className="font-bold text-[#1B2280]">{calcMAt(n)}</span>
                   </div>
                 </div>
               )
@@ -497,7 +497,7 @@ function AlunoAvaliarContent() {
 
         <div className="mb-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">{nomeProblem} — {labelTipo}</p>
-          <h1 className="text-xl font-bold text-[#1F4E79] mt-0.5">
+          <h1 className="text-xl font-bold text-[#1B2280] mt-0.5">
             {tardioIncompleto
               ? 'Completar Avaliação'
               : modoComplementar
@@ -510,7 +510,7 @@ function AlunoAvaliarContent() {
 
         <div className="bg-gray-200 rounded-full h-1.5 mb-1">
           <div
-            className="bg-[#2E75B6] h-1.5 rounded-full transition-all"
+            className="bg-[#3A50C8] h-1.5 rounded-full transition-all"
             style={{ width: `${progresso}%` }}
           />
         </div>
@@ -522,7 +522,7 @@ function AlunoAvaliarContent() {
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="text-center mb-5">
               <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                eVoce ? 'bg-green-600 ring-4 ring-green-200' : 'bg-[#1F4E79]'
+                eVoce ? 'bg-green-600 ring-4 ring-green-200' : 'bg-[#1B2280]'
               }`}>
                 <span className="text-white text-xl font-bold">{alunoAtual.nome.charAt(0)}</span>
               </div>
@@ -557,12 +557,12 @@ function AlunoAvaliarContent() {
                 <div key={c.campo} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-xs font-bold text-[#1F4E79] bg-blue-50 px-1.5 py-0.5 rounded">
+                      <span className="text-xs font-bold text-[#1B2280] bg-blue-50 px-1.5 py-0.5 rounded">
                         {c.label}
                       </span>
                       <p className="text-sm text-gray-700 mt-1 leading-snug">{c.nome}</p>
                     </div>
-                    <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
+                    <span className="text-2xl font-bold text-[#1B2280] ml-3 shrink-0 w-12 text-right">
                       {Number(notaAtual[c.campo] ?? 0).toFixed(1)}
                     </span>
                   </div>
@@ -577,12 +577,12 @@ function AlunoAvaliarContent() {
               <div className="border border-gray-100 rounded-xl p-3 bg-gray-50">
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <span className="text-xs font-bold text-[#1F4E79] bg-blue-50 px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-bold text-[#1B2280] bg-blue-50 px-1.5 py-0.5 rounded">
                       Atitudes
                     </span>
                     <p className="text-sm text-gray-700 mt-1">Avalie as atitudes durante o encontro</p>
                   </div>
-                  <span className="text-2xl font-bold text-[#1F4E79] ml-3 shrink-0 w-12 text-right">
+                  <span className="text-2xl font-bold text-[#1B2280] ml-3 shrink-0 w-12 text-right">
                     {Number(notaAtual.atitudes ?? 0).toFixed(1)}
                   </span>
                 </div>
@@ -594,7 +594,7 @@ function AlunoAvaliarContent() {
               </div>
             </div>
 
-            <div className="mt-4 bg-[#1F4E79] text-white rounded-xl p-3 text-center text-sm">
+            <div className="mt-4 bg-[#1B2280] text-white rounded-xl p-3 text-center text-sm">
               M = {((toNum(notaAtual.c1) + toNum(notaAtual.c2) + toNum(notaAtual.c3)) / 3).toFixed(2)}
               <span className="mx-3 opacity-40">|</span>
               M−At = <span className="font-bold">{calcMAt(notaAtual)}</span>
@@ -613,14 +613,14 @@ function AlunoAvaliarContent() {
           {cardAtual < alunos.length - 1 ? (
             <button
               onClick={() => setCardAtual((p) => p + 1)}
-              className="flex-1 bg-[#2E75B6] text-white px-4 py-2.5 rounded-lg text-sm font-medium"
+              className="flex-1 bg-[#3A50C8] text-white px-4 py-2.5 rounded-lg text-sm font-medium"
             >
               Próximo
             </button>
           ) : (
             <button
               onClick={() => setFase('revisao')}
-              className="flex-1 bg-[#1F4E79] text-white px-4 py-2.5 rounded-lg text-sm font-medium"
+              className="flex-1 bg-[#1B2280] text-white px-4 py-2.5 rounded-lg text-sm font-medium"
             >
               Revisar
             </button>
@@ -633,7 +633,7 @@ function AlunoAvaliarContent() {
               key={i}
               onClick={() => setCardAtual(i)}
               className={`h-2.5 rounded-full transition-all ${
-                i === cardAtual ? 'bg-[#1F4E79] w-6' : 'bg-gray-300 w-2.5'
+                i === cardAtual ? 'bg-[#1B2280] w-6' : 'bg-gray-300 w-2.5'
               }`}
             />
           ))}

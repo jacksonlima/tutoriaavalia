@@ -65,7 +65,7 @@ export default function ExcluirContaPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Cabeçalho simples */}
-      <header className="bg-[#1F4E79] text-white px-4 py-4">
+      <header className="bg-[#1B2280] text-white px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">

@@ -26,17 +26,24 @@ export default async function LoginPage({
   const erro = params.error
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] p-4">
+    <main className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'linear-gradient(135deg, #1B2280 0%, #3A50C8 100%)' }}>
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
 
-        {/* Logo NT */}
+        {/* Logo NT — paleta CESUPA */}
         <div className="mb-8">
-          <div className="w-16 h-16 bg-[#1F4E79] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">NT</span>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: '#1B2280' }}>
+            <span className="text-white text-2xl font-bold tracking-tight">NT</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#1F4E79]">Notas da Tutoria</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#1B2280' }}>
+            Notas da Tutoria
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
             Sistema de Avaliação Formativa — PBL
+          </p>
+          <p className="text-xs mt-1 font-medium" style={{ color: '#26C6DA' }}>
+            CESUPA · Medicina
           </p>
         </div>
 
@@ -50,7 +57,7 @@ export default async function LoginPage({
         {erro === 'DatabaseError' && (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-6 text-sm text-orange-700">
             <p className="font-semibold mb-1">Erro de conexão</p>
-            <p>Não foi possível conectar ao banco de dados. Verifique a variável DATABASE_URL na Vercel.</p>
+            <p>Não foi possível conectar ao banco de dados.</p>
           </div>
         )}
         {erro && erro !== 'AccessDenied' && erro !== 'DatabaseError' && (
@@ -86,12 +93,8 @@ export default async function LoginPage({
           </p>
           <p className="text-xs text-gray-400 text-center leading-relaxed">
             Ao entrar, você concorda com nossa{' '}
-            <a
-              href="/privacidade"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#1F4E79] underline hover:text-[#2E75B6]"
-            >
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer"
+              className="underline hover:opacity-80" style={{ color: '#3A50C8' }}>
               Política de Privacidade
             </a>{' '}
             e o tratamento dos seus dados conforme a LGPD.

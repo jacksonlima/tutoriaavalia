@@ -101,7 +101,7 @@ export default async function ProfessorDashboard() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-[#1F4E79]">Meus Módulos</h1>
+            <h1 className="text-xl font-bold text-[#1B2280]">Meus Módulos</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {totalModulos === 0
                 ? 'Nenhum módulo disponível'
@@ -117,7 +117,7 @@ export default async function ProfessorDashboard() {
             </Link>
             <Link
               href="/professor/modulos/novo"
-              className="bg-[#1F4E79] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d61] transition-colors"
+              className="bg-[#1B2280] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#141967] transition-colors"
             >
               + Novo Módulo
             </Link>
@@ -133,7 +133,7 @@ export default async function ProfessorDashboard() {
             </p>
             <Link
               href="/professor/modulos/novo"
-              className="inline-block bg-[#1F4E79] text-white px-5 py-2 rounded-lg text-sm font-medium"
+              className="inline-block bg-[#1B2280] text-white px-5 py-2 rounded-lg text-sm font-medium"
             >
               Criar Módulo
             </Link>

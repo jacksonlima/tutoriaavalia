@@ -129,13 +129,13 @@ export function EmailAutocomplete({ emailsJaAdicionados, onAdicionar, disabled =
             placeholder="Digite o nome ou email do aluno..."
             disabled={disabled}
             autoComplete="off"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6] disabled:bg-gray-50 pr-8"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8] disabled:bg-gray-50 pr-8"
           />
 
           {/* Spinner de carregamento */}
           {carregando && (
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <span className="w-4 h-4 border-2 border-[#2E75B6] border-t-transparent rounded-full animate-spin block" />
+              <span className="w-4 h-4 border-2 border-[#3A50C8] border-t-transparent rounded-full animate-spin block" />
             </div>
           )}
         </div>
@@ -144,7 +144,7 @@ export function EmailAutocomplete({ emailsJaAdicionados, onAdicionar, disabled =
           type="button"
           onClick={adicionarManual}
           disabled={disabled || !texto.trim()}
-          className="bg-[#2E75B6] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 whitespace-nowrap"
+          className="bg-[#3A50C8] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 whitespace-nowrap"
         >
           + Adicionar
         </button>
@@ -163,12 +163,12 @@ export function EmailAutocomplete({ emailsJaAdicionados, onAdicionar, disabled =
               onMouseDown={(e) => { e.preventDefault(); selecionar(s) }}
               className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
                 idx === indiceSel
-                  ? 'bg-blue-50 text-[#1F4E79]'
+                  ? 'bg-blue-50 text-[#1B2280]'
                   : 'hover:bg-gray-50 text-gray-800'
               }`}
             >
               {/* Avatar com inicial */}
-              <div className="w-8 h-8 rounded-full bg-[#1F4E79] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-full bg-[#1B2280] flex items-center justify-center shrink-0">
                 <span className="text-white text-xs font-bold">
                   {s.nome.charAt(0).toUpperCase()}
                 </span>
@@ -191,7 +191,7 @@ export function EmailAutocomplete({ emailsJaAdicionados, onAdicionar, disabled =
                 <span className="text-gray-500 text-xs">+</span>
               </div>
               <div className="min-w-0">
-                <p className="text-sm truncate">Adicionar <span className="font-medium text-[#2E75B6]">{texto.trim()}</span></p>
+                <p className="text-sm truncate">Adicionar <span className="font-medium text-[#3A50C8]">{texto.trim()}</span></p>
                 <p className="text-xs text-gray-400">Email não cadastrado (será criado no primeiro login)</p>
               </div>
             </button>

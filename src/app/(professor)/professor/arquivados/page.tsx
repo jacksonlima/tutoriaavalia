@@ -30,7 +30,7 @@ export default async function ModulosArquivadosPage() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-[#1F4E79]">Módulos Arquivados</h1>
+            <h1 className="text-xl font-bold text-[#1B2280]">Módulos Arquivados</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {modulos.length === 0
                 ? 'Nenhum módulo arquivado'
@@ -73,7 +73,7 @@ export default async function ModulosArquivadosPage() {
                   <div className="flex gap-2 shrink-0 ml-4">
                     <Link
                       href={`/professor/relatorios?moduloId=${modulo.id}`}
-                      className="text-xs border border-[#1F4E79] text-[#1F4E79] px-3 py-1.5 rounded-lg hover:bg-[#1F4E79] hover:text-white transition-colors"
+                      className="text-xs border border-[#1B2280] text-[#1B2280] px-3 py-1.5 rounded-lg hover:bg-[#1B2280] hover:text-white transition-colors"
                     >
                       Ver Relatório
                     </Link>

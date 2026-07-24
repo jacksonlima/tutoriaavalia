@@ -31,7 +31,7 @@ function DropdownNota({
       onChange={(e) => onChange(parseFloat(e.target.value))}
       disabled={disabled}
       aria-label={label}
-      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#2E75B6] disabled:bg-gray-50 disabled:text-gray-400 cursor-pointer"
+      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-[#3A50C8] disabled:bg-gray-50 disabled:text-gray-400 cursor-pointer"
     >
       {opcoes.map((op) => (
         <option key={op} value={op}>{op.toFixed(1)}</option>
@@ -171,7 +171,7 @@ function AvaliarTutorPageInner() {
       <main className="max-w-5xl mx-auto px-4 py-6">
 
         <div className="mb-5">
-          <h1 className="text-xl font-bold text-[#1F4E79]">
+          <h1 className="text-xl font-bold text-[#1B2280]">
             {problemaNome || 'Avaliação'} — {labelTipo}
           </h1>
           {temVisitantes && (
@@ -237,7 +237,7 @@ function AvaliarTutorPageInner() {
                   {criterios.map((c) => (
                     <div key={c.campo}>
                       <label className="block text-xs text-gray-500 mb-1">
-                        <span className="font-semibold text-[#1F4E79]">{c.label}</span> — {c.nome}
+                        <span className="font-semibold text-[#1B2280]">{c.label}</span> — {c.nome}
                       </label>
                       <DropdownNota
                         valor={n[c.campo] as number}
@@ -250,7 +250,7 @@ function AvaliarTutorPageInner() {
                   ))}
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      <span className="font-semibold text-[#1F4E79]">Atitudes</span>
+                      <span className="font-semibold text-[#1B2280]">Atitudes</span>
                     </label>
                     <DropdownNota
                       valor={n.atitudes}
@@ -267,7 +267,7 @@ function AvaliarTutorPageInner() {
                   </div>
                 )}
                 <div className="mt-3 text-right text-xs text-gray-500">
-                  M = {calcMedia(n).toFixed(2)} · M−At = <span className="font-bold text-[#1F4E79]">{calcMAt(n)}</span>
+                  M = {calcMedia(n).toFixed(2)} · M−At = <span className="font-bold text-[#1B2280]">{calcMAt(n)}</span>
                 </div>
               </div>
             )
@@ -278,7 +278,7 @@ function AvaliarTutorPageInner() {
         <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden mt-4">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-[#1F4E79] text-white">
+              <thead className="bg-[#1B2280] text-white">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium min-w-[200px]">Aluno</th>
                   {criterios.map((c) => (
@@ -347,7 +347,7 @@ function AvaliarTutorPageInner() {
                           disabled={n.faltou}
                           className="w-4 h-4 cursor-pointer disabled:opacity-30" />
                       </td>
-                      <td className="px-3 py-2 text-center font-semibold text-[#1F4E79]">
+                      <td className="px-3 py-2 text-center font-semibold text-[#1B2280]">
                         {calcMAt(n)}
                       </td>
                     </tr>
@@ -360,7 +360,7 @@ function AvaliarTutorPageInner() {
 
         <div className="mt-5">
           <button onClick={salvar} disabled={salvando}
-            className="w-full bg-[#1F4E79] text-white px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
+            className="w-full bg-[#1B2280] text-white px-4 py-2.5 rounded-lg text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
             {salvando
               ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Salvando...</>
               : 'Salvar Notas'}
@@ -376,7 +376,7 @@ export default function AvaliarTutorPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#1F4E79] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-4 border-[#1B2280] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Carregando...</p>
         </div>
       </div>

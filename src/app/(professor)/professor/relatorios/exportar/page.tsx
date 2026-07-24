@@ -186,28 +186,28 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
           thead { display: table-header-group; }
         }
         .page { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
-        .header { border-bottom: 3px solid #1F4E79; padding-bottom: 12px; margin-bottom: 20px; }
-        .header h1 { font-size: 18px; font-weight: bold; color: #1F4E79; margin: 0 0 4px; }
+        .header { border-bottom: 3px solid #1B2280; padding-bottom: 12px; margin-bottom: 20px; }
+        .header h1 { font-size: 18px; font-weight: bold; color: #1B2280; margin: 0 0 4px; }
         .header .meta { font-size: 11px; color: #555; display: flex; gap: 24px; flex-wrap: wrap; }
         .section { margin-bottom: 32px; }
-        .section-title { background: #1F4E79; color: white; font-size: 12px; font-weight: bold; padding: 6px 12px; margin: 0 0 8px; border-radius: 4px; }
-        .subsection-title { background: #2E75B6; color: white; font-size: 11px; font-weight: bold; padding: 4px 10px; margin: 16px 0 6px; border-radius: 3px; }
+        .section-title { background: #1B2280; color: white; font-size: 12px; font-weight: bold; padding: 6px 12px; margin: 0 0 8px; border-radius: 4px; }
+        .subsection-title { background: #3A50C8; color: white; font-size: 11px; font-weight: bold; padding: 4px 10px; margin: 16px 0 6px; border-radius: 3px; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        th { background: #1F4E79; color: white; padding: 5px 6px; text-align: center; font-weight: bold; }
+        th { background: #1B2280; color: white; padding: 5px 6px; text-align: center; font-weight: bold; }
         th.left { text-align: left; }
         td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: center; }
         td.left { text-align: left; }
         tr:nth-child(even) td { background: #f8f9fb; }
         tr:hover td { background: #eff6ff; }
-        .nota-final { font-weight: bold; color: #1F4E79; font-size: 11px; }
+        .nota-final { font-weight: bold; color: #1B2280; font-size: 11px; }
         .nota-sat { color: #16a34a; font-weight: bold; font-size: 9px; }
         .nota-vazia { color: #9ca3af; }
         .faltou { color: #dc2626; font-size: 9px; font-weight: bold; }
         .comp { color: #16a34a; font-size: 9px; font-weight: bold; }
         .legenda { font-size: 9px; color: #6b7280; margin-top: 6px; line-height: 1.6; }
-        .print-btn { position: fixed; top: 16px; right: 16px; z-index: 100; background: #1F4E79; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; }
-        .print-btn:hover { background: #163d61; }
-        .back-btn { position: fixed; top: 16px; left: 16px; z-index: 100; background: white; color: #1F4E79; border: 2px solid #1F4E79; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .print-btn { position: fixed; top: 16px; right: 16px; z-index: 100; background: #1B2280; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; }
+        .print-btn:hover { background: #141967; }
+        .back-btn { position: fixed; top: 16px; left: 16px; z-index: 100; background: white; color: #1B2280; border: 2px solid #1B2280; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
       `}</style>
 
       <div className="no-print">
@@ -325,20 +325,20 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                   <thead>
                     <tr>
                       <th className="left" rowSpan={2}>Aluno</th>
-                      <th colSpan={5} style={{ background: '#1e3a5f' }}>Tutor</th>
+                      <th colSpan={5} style={{ background: '#141967' }}>Tutor</th>
                       <th colSpan={5} style={{ background: '#0d6b3e' }}>Auto-avaliação</th>
                       <th colSpan={alunos.length} style={{ background: '#7c3aed' }}>
                         Interpares (M-At de cada avaliador)
                       </th>
                       <th rowSpan={2}>Méd. Inter</th>
-                      <th rowSpan={2} style={{ background: '#1F4E79', minWidth: 52 }}>Nota Final</th>
+                      <th rowSpan={2} style={{ background: '#1B2280', minWidth: 52 }}>Nota Final</th>
                     </tr>
                     <tr>
                       {criterios.map((c) => (
-                        <th key={`t-${c.campo}`} style={{ background: '#274e7a', fontSize: 9 }}>{c.label}</th>
+                        <th key={`t-${c.campo}`} style={{ background: '#1B2280', fontSize: 9 }}>{c.label}</th>
                       ))}
-                      <th style={{ background: '#274e7a', fontSize: 9 }}>At.</th>
-                      <th style={{ background: '#274e7a', fontSize: 9 }}>M-At</th>
+                      <th style={{ background: '#1B2280', fontSize: 9 }}>At.</th>
+                      <th style={{ background: '#1B2280', fontSize: 9 }}>M-At</th>
                       {criterios.map((c) => (
                         <th key={`a-${c.campo}`} style={{ background: '#166534', fontSize: 9 }}>{c.label}</th>
                       ))}
@@ -409,7 +409,7 @@ export default async function ExportarRelatorio({ searchParams }: Props) {
                           <td style={{ color: avT?.faltou ? '#9ca3af' : undefined }}>
                             {avT ? Number(avT.atitudes).toFixed(1) : '—'}
                           </td>
-                          <td style={{ fontWeight: 600, color: '#1e3a5f' }}>
+                          <td style={{ fontWeight: 600, color: '#141967' }}>
                             {matTutor === null ? '—'
                               : matTutor === 'SATISFATORIO' ? <span className="nota-sat">SAT</span>
                               : matTutor.toFixed(2)}

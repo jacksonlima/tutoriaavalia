@@ -184,13 +184,13 @@ export default async function RelatoriosPage({ searchParams }: Props) {
       <main className="max-w-5xl mx-auto px-4 py-6">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-[#1F4E79]">Resumo MT — {modulo.nome}</h1>
+            <h1 className="text-xl font-bold text-[#1B2280]">Resumo MT — {modulo.nome}</h1>
             <p className="text-sm text-gray-500 mt-0.5">{modulo.tutoria} - Turma {modulo.turma} - {modulo.ano}</p>
           </div>
           <Link
             href={`/professor/relatorios/exportar?moduloId=${moduloId}`}
             target="_blank"
-            className="flex items-center gap-2 bg-[#1F4E79] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#163d61] transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 bg-[#1B2280] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#141967] transition-colors whitespace-nowrap"
           >
             🖨️ Exportar / Imprimir
           </Link>
@@ -212,8 +212,8 @@ export default async function RelatoriosPage({ searchParams }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-xs whitespace-nowrap">
               <thead>
-                <tr className="bg-[#1F4E79] text-white">
-                  <th className="text-left px-4 py-3 font-medium sticky left-0 bg-[#1F4E79]">Aluno</th>
+                <tr className="bg-[#1B2280] text-white">
+                  <th className="text-left px-4 py-3 font-medium sticky left-0 bg-[#1B2280]">Aluno</th>
                   {modulo.problemas.map((p) => (
                     <th key={p.id} colSpan={p.temSaltoTriplo ? 3 : 2}
                       className="px-2 py-3 font-medium text-center border-l border-blue-800">
@@ -224,8 +224,8 @@ export default async function RelatoriosPage({ searchParams }: Props) {
                   <th className="px-3 py-3 font-medium">M.Fe</th>
                   <th className="px-3 py-3 font-medium bg-blue-900">Nota</th>
                 </tr>
-                <tr className="bg-[#2E75B6] text-white text-center text-xs">
-                  <th className="sticky left-0 bg-[#2E75B6]" />
+                <tr className="bg-[#3A50C8] text-white text-center text-xs">
+                  <th className="sticky left-0 bg-[#3A50C8]" />
                   {modulo.problemas.map((p) =>
                     p.temSaltoTriplo ? (
                       <React.Fragment key={p.id + 'header'}>
@@ -284,7 +284,7 @@ export default async function RelatoriosPage({ searchParams }: Props) {
                     })}
                     <td className="px-3 py-2 text-center font-semibold border-l border-gray-100">{d(linha.mediaAb)}</td>
                     <td className="px-3 py-2 text-center font-semibold">{d(linha.mediaFe)}</td>
-                    <td className="px-3 py-2 text-center font-bold text-[#1F4E79] text-sm">{d(linha.notaFinal)}</td>
+                    <td className="px-3 py-2 text-center font-bold text-[#1B2280] text-sm">{d(linha.notaFinal)}</td>
                   </tr>
                 ))}
               </tbody>

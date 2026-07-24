@@ -60,7 +60,7 @@ export default function DireitosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#1F4E79] text-white px-4 py-4">
+      <header className="bg-[#1B2280] text-white px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -91,7 +91,7 @@ export default function DireitosPage() {
         ) : (
           <>
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-[#1F4E79] mb-2">
+              <h1 className="text-3xl font-bold text-[#1B2280] mb-2">
                 Exercício de Direitos LGPD
               </h1>
               <p className="text-sm text-gray-500">
@@ -118,7 +118,7 @@ export default function DireitosPage() {
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Seu nome completo"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1F4E79]"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2280]"
                   />
                 </div>
 
@@ -131,7 +131,7 @@ export default function DireitosPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu.email@cesupa.br"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1F4E79]"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2280]"
                   />
                 </div>
 
@@ -141,7 +141,7 @@ export default function DireitosPage() {
                   </label>
                   <div className="space-y-2">
                     {TIPOS.map((t) => (
-                      <label key={t.valor} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${tipo === t.valor ? 'border-[#1F4E79] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <label key={t.valor} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${tipo === t.valor ? 'border-[#1B2280] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <input
                           type="radio"
                           name="tipo"
@@ -168,7 +168,7 @@ export default function DireitosPage() {
                     onChange={(e) => setDescricao(e.target.value)}
                     rows={4}
                     placeholder="Descreva sua solicitação com detalhes..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1F4E79] resize-none"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2280] resize-none"
                   />
                 </div>
               </div>
@@ -182,7 +182,7 @@ export default function DireitosPage() {
               <button
                 type="submit"
                 disabled={enviando}
-                className="w-full bg-[#1F4E79] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#163d61] disabled:opacity-50 transition-colors"
+                className="w-full bg-[#1B2280] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#141967] disabled:opacity-50 transition-colors"
               >
                 {enviando ? 'Enviando...' : 'Enviar solicitação'}
               </button>

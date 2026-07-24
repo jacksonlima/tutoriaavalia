@@ -34,7 +34,7 @@ export function Toaster() {
           className={`rounded-xl px-4 py-3 shadow-lg text-sm font-medium flex items-start gap-2 ${
             t.variant === 'destructive'
               ? 'bg-red-600 text-white'
-              : 'bg-[#1F4E79] text-white'
+              : 'bg-[#1B2280] text-white'
           }`}
         >
           <span className="flex-1">

@@ -66,9 +66,9 @@ export default async function DebugPage() {
       </section>
 
       <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-        <a href="/login" style={{ color: '#1F4E79' }}>← Login</a>
-        <a href="/professor/dashboard" style={{ color: '#1F4E79' }}>Dashboard Professor</a>
-        <a href="/aluno/dashboard" style={{ color: '#1F4E79' }}>Dashboard Aluno</a>
+        <a href="/login" style={{ color: '#1B2280' }}>← Login</a>
+        <a href="/professor/dashboard" style={{ color: '#1B2280' }}>Dashboard Professor</a>
+        <a href="/aluno/dashboard" style={{ color: '#1B2280' }}>Dashboard Aluno</a>
       </div>
     </main>
   )

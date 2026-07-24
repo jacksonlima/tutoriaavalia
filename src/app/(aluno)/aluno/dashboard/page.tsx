@@ -159,7 +159,7 @@ export default async function AlunoDashboard() {
       <main className="max-w-lg mx-auto px-4 py-6">
 
         {/* Cabeçalho do módulo */}
-        <div className="bg-[#1F4E79] rounded-xl p-4 text-white mb-5">
+        <div className="bg-[#1B2280] rounded-xl p-4 text-white mb-5">
           <p className="text-xs text-blue-200 mb-0.5">Módulo Ativo</p>
           <h1 className="text-lg font-bold">{modulo.nome}</h1>
           <p className="text-sm text-blue-200 mt-0.5">
@@ -189,7 +189,7 @@ export default async function AlunoDashboard() {
                     {prob.nome ?? ('Problema ' + String(prob.numero).padStart(2, '0'))}
                   </p>
                   {prob.temSaltoTriplo && (
-                    <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
+                    <span className="text-xs bg-[#1B2280] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
                   )}
                 </div>
 
@@ -212,7 +212,7 @@ export default async function AlunoDashboard() {
         {/* ── Situações Excepcionais ─────────────────────────────────────── */}
         {situacoesExcepcionais.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-base font-bold text-[#1F4E79] mb-1 flex items-center gap-2">
+            <h2 className="text-base font-bold text-[#1B2280] mb-1 flex items-center gap-2">
               🔄 Situações Excepcionais
             </h2>
             <p className="text-xs text-gray-400 mb-3">

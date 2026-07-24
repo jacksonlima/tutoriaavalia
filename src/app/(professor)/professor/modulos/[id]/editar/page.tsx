@@ -127,7 +127,7 @@ export default function EditarModuloPage() {
       <div className="min-h-screen bg-gray-50">
         <TopBar nome={session?.user?.nome ?? ''} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
         <main className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="w-8 h-8 border-4 border-[#2E75B6] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-8 h-8 border-4 border-[#3A50C8] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-gray-400 mt-4 text-sm">Carregando módulo...</p>
         </main>
       </div>
@@ -153,7 +153,7 @@ export default function EditarModuloPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         <div className="mb-5">
-          <h1 className="text-xl font-bold text-[#1F4E79]">Editar Módulo</h1>
+          <h1 className="text-xl font-bold text-[#1B2280]">Editar Módulo</h1>
           <p className="text-sm text-gray-500">Altere as informações e clique em Salvar</p>
         </div>
 
@@ -178,7 +178,7 @@ export default function EditarModuloPage() {
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex: Módulo de Saúde Coletiva"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8]"
               />
             </div>
 
@@ -189,7 +189,7 @@ export default function EditarModuloPage() {
                   type="number"
                   value={ano}
                   onChange={(e) => setAno(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A50C8]"
                 />
               </div>
 
@@ -198,7 +198,7 @@ export default function EditarModuloPage() {
                 <select
                   value={tutoria}
                   onChange={(e) => setTutoria(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3A50C8]"
                 >
                   <option value="">Selecione...</option>
                   {OPCOES_TUTORIA.map((op) => (
@@ -212,7 +212,7 @@ export default function EditarModuloPage() {
                 <select
                   value={turma}
                   onChange={(e) => setTurma(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2E75B6]"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#3A50C8]"
                 >
                   <option value="">Selecione...</option>
                   {OPCOES_TURMA.map((op) => (
@@ -345,7 +345,7 @@ export default function EditarModuloPage() {
                     <div className="flex items-center gap-1 w-24 shrink-0">
                       <span className="text-xs text-gray-400">P{String(prob.numero).padStart(2, '0')}</span>
                       {prob.temSaltoTriplo && (
-                        <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
+                        <span className="text-xs bg-[#1B2280] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
                       )}
                     </div>
                     <input
@@ -356,7 +356,7 @@ export default function EditarModuloPage() {
                         setNomesProblemas(arr)
                       }}
                       placeholder={`Problema ${String(prob.numero).padStart(2, '0')}`}
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#2E75B6]"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3A50C8]"
                     />
                   </div>
                 ))}
@@ -378,7 +378,7 @@ export default function EditarModuloPage() {
               type="button"
               onClick={salvar}
               disabled={salvando}
-              className="flex-1 bg-[#1F4E79] text-white px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 bg-[#1B2280] text-white px-4 py-3 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {salvando ? (
                 <>

@@ -439,7 +439,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                   {prob.nome ?? `Problema ${String(prob.numero).padStart(2, '0')}`}
                 </span>
                 {prob.temSaltoTriplo && (
-                  <span className="text-xs bg-[#1F4E79] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
+                  <span className="text-xs bg-[#1B2280] text-white px-1.5 py-0.5 rounded font-bold">ST</span>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -523,7 +523,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
           {/* Relatório */}
           <Link
             href={`/professor/relatorios?moduloId=${modulo.id}`}
-            className="block w-full text-center text-sm text-[#1F4E79] font-medium border border-[#1F4E79] rounded-lg py-2 hover:bg-[#1F4E79] hover:text-white transition-colors"
+            className="block w-full text-center text-sm text-[#1B2280] font-medium border border-[#1B2280] rounded-lg py-2 hover:bg-[#1B2280] hover:text-white transition-colors"
           >
             Ver Relatório de Notas
           </Link>
@@ -623,7 +623,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                                 <div key={prob.id}>
                                   <p className="text-xs font-medium text-gray-700 mb-1">
                                     P{String(prob.numero).padStart(2,'0')} {prob.nome ? `— ${prob.nome}` : ''}
-                                    {prob.temSaltoTriplo && <span className="ml-1 bg-[#1F4E79] text-white text-xs px-1 rounded">ST</span>}
+                                    {prob.temSaltoTriplo && <span className="ml-1 bg-[#1B2280] text-white text-xs px-1 rounded">ST</span>}
                                   </p>
                                   <div className="flex flex-wrap gap-1.5 pl-2">
                                     {tiposDisponiveis(prob).map(({value,label}) => {
@@ -742,7 +742,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                               Problema {String(prob.numero).padStart(2,'0')}
                               {prob.nome ? ` — ${prob.nome}` : ''}
                               {prob.temSaltoTriplo && (
-                                <span className="ml-1.5 bg-[#1F4E79] text-white text-xs px-1.5 py-0.5 rounded font-bold">ST</span>
+                                <span className="ml-1.5 bg-[#1B2280] text-white text-xs px-1.5 py-0.5 rounded font-bold">ST</span>
                               )}
                             </p>
                             <div className="flex flex-wrap gap-3">
@@ -773,7 +773,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
                           type="button"
                           disabled={salvando || permsWizard.length === 0}
                           onClick={salvarSubstituto}
-                          className="bg-[#1F4E79] hover:bg-[#163d61] text-white text-xs px-4 py-1.5 rounded-lg disabled:opacity-40"
+                          className="bg-[#1B2280] hover:bg-[#141967] text-white text-xs px-4 py-1.5 rounded-lg disabled:opacity-40"
                         >
                           {salvando ? 'Salvando...' : '✅ Confirmar substituto'}
                         </button>
@@ -803,7 +803,7 @@ export function ModuloCard({ modulo, isTitular }: ModuloCardProps) {
             <div className="flex gap-2 pt-1">
               <Link
                 href={`/professor/modulos/${modulo.id}/editar`}
-                className="flex-1 text-xs text-center border border-[#2E75B6] text-[#2E75B6] rounded-lg py-2 hover:bg-blue-50 transition-colors font-medium"
+                className="flex-1 text-xs text-center border border-[#3A50C8] text-[#3A50C8] rounded-lg py-2 hover:bg-blue-50 transition-colors font-medium"
                 onClick={(e) => e.stopPropagation()}
               >
                 ✏️ Editar
