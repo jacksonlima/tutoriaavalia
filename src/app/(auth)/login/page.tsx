@@ -3,23 +3,17 @@ import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-// Next.js 15: searchParams é uma Promise — precisa ser await-ada
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string; callbackUrl?: string }>
 }) {
-  // 1. Aguarda searchParams (obrigatório no Next.js 15)
   const params = await searchParams
-
-  // 2. Verifica sessão atual
   const session = await auth()
 
-  // 3. Já logado com papel definido → redireciona para o dashboard correto
   if (session?.user?.papel === 'TUTOR') redirect('/professor/dashboard')
   if (session?.user?.papel === 'ALUNO') redirect('/aluno/dashboard')
 
-  // 4. Sanitiza callbackUrl: nunca aponta para /login nem para /api (evita loops)
   const raw = params.callbackUrl ?? ''
   const safeCallback =
     raw.startsWith('/') &&
@@ -27,7 +21,7 @@ export default async function LoginPage({
     !raw.startsWith('/api') &&
     raw !== '/'
       ? raw
-      : '/professor/dashboard' // fallback seguro — o middleware redireciona para o certo
+      : '/professor/dashboard'
 
   const erro = params.error
 
@@ -35,14 +29,14 @@ export default async function LoginPage({
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1F4E79] to-[#2E75B6] p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
 
-        {/* Logo */}
+        {/* Logo NT */}
         <div className="mb-8">
           <div className="w-16 h-16 bg-[#1F4E79] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">TA</span>
+            <span className="text-white text-2xl font-bold">NT</span>
           </div>
           <h1 className="text-2xl font-bold text-[#1F4E79]">Notas da Tutoria</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Sistema de Avaliação Formativa — ABP
+            Sistema de Avaliação Formativa — PBL
           </p>
         </div>
 

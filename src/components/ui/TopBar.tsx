@@ -1,76 +1,72 @@
 /**
- * Notas da Tutoria v2 — Sistema de Avaliação Formativa para ABP
+ * Notas da Tutoria v2 — Sistema de Avaliação Formativa para PBL
  * Autor: Jackson Lima — CESUPA
  *
- * TopBar — barra superior do sistema.
- * Para tutores, exibe o sino de notificações (NotificationBell).
+ * TopBar — barra superior com logo NT, nome do usuário e sino de notificações.
  */
 
 'use client'
 
-import { signOut } from 'next-auth/react'
 import Link from 'next/link'
+import { signOut, useSession } from 'next-auth/react'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 
 interface TopBarProps {
-  nome:       string
-  papel:      'TUTOR' | 'ALUNO'
-  backHref?:  string
-  backLabel?: string
+  nome?:       string
+  papel?:      'TUTOR' | 'ALUNO'
+  backHref?:   string
+  backLabel?:  string
 }
 
-export function TopBar({ nome, papel, backHref, backLabel = 'Voltar' }: TopBarProps) {
-  const dashboard = papel === 'TUTOR' ? '/professor/dashboard' : '/aluno/dashboard'
+export function TopBar({ nome, papel, backHref, backLabel }: TopBarProps) {
+  const { data: session } = useSession()
+  const nomeExibido = nome ?? session?.user?.nome ?? session?.user?.email ?? ''
+
+  const dashHref = papel === 'TUTOR' ? '/professor/dashboard' : '/aluno/dashboard'
 
   return (
-    <header className="bg-[#1F4E79] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-md">
-      <div className="flex items-center gap-2">
+    <header className="bg-[#1F4E79] text-white shadow-sm">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
 
-        {backHref && (
-          <Link
-            href={backHref}
-            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/25 transition-colors rounded-lg px-3 py-1.5 mr-1"
-          >
-            <span className="text-sm font-bold">{'←'}</span>
-            <span className="text-xs font-medium hidden sm:block">{backLabel}</span>
-          </Link>
-        )}
-
-        <Link href={dashboard} className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-            <span className="text-xs font-bold">TA</span>
+        {/* Logo + nome do app */}
+        <Link href={dashHref} className="flex items-center gap-2.5 shrink-0">
+          {/* Logo NT — substituiu TA */}
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+            <span className="text-white text-sm font-bold leading-none">NT</span>
           </div>
           <span className="font-semibold text-sm hidden sm:block">Notas da Tutoria</span>
         </Link>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <div className="text-right hidden sm:block mr-1">
-          <p className="text-xs font-medium leading-tight">{nome}</p>
-          <p className="text-xs text-blue-200">
-            {papel === 'TUTOR' ? 'Professor' : 'Aluno'}
-          </p>
+        {/* Botão de voltar (opcional) */}
+        {backHref && (
+          <Link
+            href={backHref}
+            className="text-white/80 hover:text-white text-xs flex items-center gap-1 transition-colors"
+          >
+            ← {backLabel ?? 'Voltar'}
+          </Link>
+        )}
+
+        {/* Direita: nome + sino + sair */}
+        <div className="flex items-center gap-3 ml-auto">
+          {/* Nome do usuário */}
+          {nomeExibido && (
+            <span className="text-xs text-white/80 hidden sm:block truncate max-w-[140px]">
+              {nomeExibido}
+            </span>
+          )}
+
+          {/* Sino de notificações (só para tutores) */}
+          {papel === 'TUTOR' && <NotificationBell />}
+
+          {/* Botão sair */}
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="text-white/70 hover:text-white text-xs transition-colors whitespace-nowrap"
+          >
+            Sair
+          </button>
         </div>
-
-        {/* Sino de notificações — apenas para tutores */}
-        {papel === 'TUTOR' && <NotificationBell />}
-
-        <a
-          href="/privacidade"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded transition-colors hidden sm:block"
-          title="Política de Privacidade"
-        >
-          Privacidade
-        </a>
-        <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded transition-colors"
-          title="Sair"
-        >
-          Sair
-        </button>
       </div>
     </header>
   )
