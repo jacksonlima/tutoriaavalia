@@ -45,6 +45,7 @@ export const OPCOES_SEMESTRE = ['01', '02'] as const
 
 // Nomes dos módulos — lista oficial CESUPA
 export const OPCOES_MODULO = [
+  '0 - Semana do Calouro',
   'I - Introdução ao Estudo da Medicina',
   'II - Implicações no Crescimento e Diferenciação Celular',
   'III - Ataque e Defesa',
