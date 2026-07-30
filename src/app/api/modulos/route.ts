@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   //         e apenas os problemas com pelo menos um encontro ativo
   //         (com seus UUIDs — necessários para navegação).
   const matriculas = await prisma.matricula.findMany({
-    where: { usuarioId: session?.user?.id },
+    where: { usuarioId: session?.user?.id, modulo: { arquivado: false } },
     include: {
       modulo: {
         include: {
