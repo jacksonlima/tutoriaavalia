@@ -68,7 +68,7 @@ model Modulo {
   notificacoes Notificacao[]
   situacoesExcepcionais SituacaoExcepcional[] @relation("ModuloSituacoes")
 
-  @@unique([ano, tutoria, turma, tutorId])
+  @@index([ano, tutoria, turma, tutorId])
   @@map("modulos")
 }
 
