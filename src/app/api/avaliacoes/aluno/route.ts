@@ -1,5 +1,5 @@
 /**
- * Notas da Tutoria v2 — API: Avaliações do Aluno (interpares + auto-avaliação)
+ * Notas da Tutoria v2 — API: Avaliações do Aluno
  * Autor: Jackson Lima — CESUPA
  *
  * REGRAS:
@@ -9,13 +9,11 @@
  *   FIND-NEW-02:       GET retorna encontroAtivo
  *   P2002 FIX:         AvaliacaoAluno sempre via upsert
  *
- * NOTIFICAÇÕES:
- *   Banco tem colunas híbridas (migração parcial):
- *     tutor_id   TEXT NOT NULL  ← obrigatório, coluna antiga
- *     usuario_id TEXT           ← nova (nullable ainda)
- *     modulo_id  TEXT           ← nova (nullable)
- *     tipo       TEXT NOT NULL DEFAULT 'GERAL' ← nova
- *   Enviamos tutor_id + usuario_id para compatibilidade total.
+ *   BLOQUEIO RETROATIVO (novo):
+ *     Alunos que ingressaram no módulo APÓS um encontro já concluído
+ *     não podem submeter avaliações desse encontro.
+ *     Detectado por: algum colega submeteu ANTES da data de matrícula do aluno.
+ *     Exceção: euSouOTardio=true (janela complementar legítima) não é bloqueado.
  */
 
 import { auth }               from '@/lib/auth'
@@ -35,29 +33,19 @@ async function upsertAvaliacao(
   return tx.avaliacaoAluno.upsert({
     where: {
       problemaId_avaliadorId_avaliadoId_tipoEncontro: {
-        problemaId,
-        avaliadorId,
-        avaliadoId:   av.avaliadoId,
-        tipoEncontro: tipoEncontro as any,
+        problemaId, avaliadorId, avaliadoId: av.avaliadoId, tipoEncontro: tipoEncontro as any,
       },
     },
     create: {
-      problemaId,
-      avaliadorId,
-      avaliadoId:   av.avaliadoId,
+      problemaId, avaliadorId, avaliadoId: av.avaliadoId,
       tipoEncontro: tipoEncontro as any,
       c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
     },
-    update: {
-      c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes,
-    },
+    update: { c1: av.c1, c2: av.c2, c3: av.c3, atitudes: av.atitudes },
   })
 }
 
 // ── Helper: cria notificações após submissão ──────────────────────────────────
-// Banco tem colunas híbridas — envia tutor_id (NOT NULL obrigatório) e
-// usuario_id/modulo_id/tipo (novas colunas já existentes).
-// Melhor esforço — falha NÃO reverte a submissão.
 async function criarNotificacoes(
   prisma: any,
   params: {
@@ -81,11 +69,9 @@ async function criarNotificacoes(
   const titulo   = `Nova avaliação — P${params.problemaNumero} ${tipoLabel[params.tipoEncontro] ?? params.tipoEncontro}`
   const mensagem = `${params.alunoNome} enviou as avaliações de ${tipoLabel[params.tipoEncontro] ?? params.tipoEncontro} do Problema ${params.problemaNumero} — ${params.moduloNome} (${params.moduloTutoria}).`
 
-  // Coleta IDs dos tutores a notificar (sem duplicatas)
   const tutorIds = new Set<string>()
   tutorIds.add(params.moduloTutorId)
 
-  // Co-tutores com permissão para este problema + tipoEncontro
   const perms = await prisma.coTutorPermissao.findMany({
     where:  { problemaId: params.problemaId, tipoEncontro: params.tipoEncontro },
     select: { tutorId: true },
@@ -94,8 +80,6 @@ async function criarNotificacoes(
 
   if (tutorIds.size === 0) return
 
-  // Usa $executeRawUnsafe para ter controle total das colunas
-  // e evitar conflito entre schema Prisma e estrutura real do banco
   for (const tutorId of tutorIds) {
     await prisma.$executeRaw`
       INSERT INTO notificacoes
@@ -127,7 +111,6 @@ export async function POST(req: NextRequest) {
   const { problemaId, tipoEncontro, avaliacoes } = result.data
   const userId = session?.user?.id!
 
-  // Busca problema com dados do módulo para notificações
   const problema = await prisma.problema.findUnique({
     where:  { id: problemaId },
     select: {
@@ -137,12 +120,7 @@ export async function POST(req: NextRequest) {
       fechamentoAAtivo: true,
       fechamentoBAtivo: true,
       modulo: {
-        select: {
-          id:      true,
-          nome:    true,
-          tutoria: true,
-          tutorId: true,
-        },
+        select: { id: true, nome: true, tutoria: true, tutorId: true },
       },
     },
   })
@@ -250,6 +228,44 @@ export async function POST(req: NextRequest) {
       { error: 'Você já enviou esta avaliação. Não é possível alterar após o envio.' },
       { status: 409 },
     )
+  }
+
+  // ── BLOQUEIO RETROATIVO ─────────────────────────────────────────────────────
+  // Impede que alunos que ingressaram APÓS um encontro já concluído
+  // submetam avaliações retroativamente.
+  //
+  // Lógica: se algum colega submeteu ANTES da data de matrícula deste aluno
+  // → o encontro aconteceu antes do aluno entrar no grupo → bloqueado.
+  //
+  // Exceção: euSouOTardio=true (janela complementar legítima) não é bloqueado —
+  // o tardio tem janela aberta exatamente para participar de um encontro em andamento.
+  if (!euSouOTardio) {
+    const matriculaDoAluno = await prisma.matricula.findUnique({
+      where:  { moduloId_usuarioId: { moduloId: problema.modulo.id, usuarioId: userId } },
+      select: { criadoEm: true },
+    })
+
+    if (matriculaDoAluno) {
+      // Verifica se algum colega submeteu ANTES do aluno ser matriculado
+      const submissaoAnteriorAoIngresso = await prisma.submissao.findFirst({
+        where: {
+          problemaId,
+          tipoEncontro: tipoEncontro as any,
+          avaliadorId:  { not: userId },
+          submetidoEm:  { lt: matriculaDoAluno.criadoEm },
+        },
+        select: { id: true },
+      })
+
+      if (submissaoAnteriorAoIngresso) {
+        return NextResponse.json(
+          {
+            error: 'Este encontro foi concluído antes da sua entrada no grupo. Avaliações de encontros anteriores ao seu ingresso não são permitidas.',
+          },
+          { status: 403 },
+        )
+      }
+    }
   }
 
   // ── PRIMEIRA SUBMISSÃO ──────────────────────────────────────────────────────
