@@ -1,13 +1,22 @@
-import { auth } from '@/lib/auth'
+/**
+ * Notas da Tutoria v2 — Página: Módulos Arquivados
+ * Autor: Jackson Lima — CESUPA
+ *
+ * Exibe módulos arquivados do tutor com opções de:
+ *   - Reativar (desarquivar)
+ *   - Excluir permanentemente (com confirmação)
+ */
+import { auth }     from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { TopBar } from '@/components/ui/TopBar'
+import Link         from 'next/link'
+import { TopBar }   from '@/components/ui/TopBar'
+import { DeleteModuloButton } from '@/components/ui/DeleteModuloButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ModulosArquivadosPage() {
   const { prisma } = await import('@/lib/db')
-  const session = await auth()
+  const session    = await auth()
   if (!session || session?.user?.papel !== 'TUTOR') redirect('/login')
 
   const modulos = await prisma.modulo.findMany({
@@ -25,19 +34,25 @@ export default async function ModulosArquivadosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopBar nome={session?.user?.nome} papel="TUTOR" backHref="/professor/dashboard" backLabel="Voltar ao painel" />
+      <TopBar
+        nome={session?.user?.nome}
+        papel="TUTOR"
+        backHref="/professor/dashboard"
+        backLabel="Voltar ao painel"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-[#1B2280]">Módulos Arquivados</h1>
+            <h1 className="text-xl font-bold" style={{ color: '#1B2280' }}>
+              Módulos Arquivados
+            </h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {modulos.length === 0
                 ? 'Nenhum módulo arquivado'
                 : `${modulos.length} módulo${modulos.length > 1 ? 's' : ''} arquivado${modulos.length > 1 ? 's' : ''}`}
             </p>
           </div>
-
         </div>
 
         {modulos.length === 0 ? (
@@ -51,83 +66,108 @@ export default async function ModulosArquivadosPage() {
         ) : (
           <div className="space-y-4">
             {modulos.map((modulo) => (
-              <div key={modulo.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden opacity-80">
-                {/* Cabeçalho */}
-                <div className="p-4 flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-bold text-gray-700 text-sm">{modulo.nome}</h2>
-                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                        Arquivado
+              <div
+                key={modulo.id}
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+              >
+                {/* Cabeçalho do módulo */}
+                <div className="px-5 py-4 flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                        📦 Arquivado
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {modulo.tutoria} · Turma {modulo.turma} · {modulo.ano}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {modulo.ano} · {modulo.tutoria} · Turma {modulo.turma} · {modulo._count.matriculas} alunos
-                    </p>
-                    <p className="text-xs text-gray-300 mt-0.5">
+                    <h2 className="font-bold text-gray-800 truncate">{modulo.nome}</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {modulo._count.matriculas} aluno{modulo._count.matriculas !== 1 ? 's' : ''} ·{' '}
                       {modulo.problemas.length} problema{modulo.problemas.length !== 1 ? 's' : ''}
                     </p>
                   </div>
 
-                  {/* Botões de ação */}
-                  <div className="flex gap-2 shrink-0 ml-4">
-                    <Link
-                      href={`/professor/relatorios?moduloId=${modulo.id}`}
-                      className="text-xs border border-[#1B2280] text-[#1B2280] px-3 py-1.5 rounded-lg hover:bg-[#1B2280] hover:text-white transition-colors"
-                    >
-                      Ver Relatório
-                    </Link>
-                    <DesarquivarBtn moduloId={modulo.id} />
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Botão Reativar */}
+                    <form action={async () => {
+                      'use server'
+                      const { prisma: db } = await import('@/lib/db')
+                      await db.modulo.update({
+                        where: { id: modulo.id },
+                        data:  { arquivado: false },
+                      })
+                      const { revalidatePath } = await import('next/cache')
+                      revalidatePath('/professor/arquivados')
+                      revalidatePath('/professor/dashboard')
+                    }}>
+                      <button
+                        type="submit"
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors text-white"
+                        style={{ backgroundColor: '#1B2280', borderColor: '#1B2280' }}
+                      >
+                        Reativar
+                      </button>
+                    </form>
+
+                    {/* Botão Excluir (client component com modal) */}
+                    <DeleteModuloButton
+                      moduloId={modulo.id}
+                      moduloNome={modulo.nome}
+                    />
                   </div>
                 </div>
 
-                {/* Lista resumida de alunos */}
-                <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
-                  <p className="text-xs text-gray-400 mb-1.5">Alunos:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {modulo.matriculas.map((m) => (
-                      <span key={m.id} className="text-xs bg-white border border-gray-200 rounded-full px-2 py-0.5 text-gray-600">
-                        {m.usuario.nome}
-                      </span>
-                    ))}
+                {/* Lista de problemas */}
+                {modulo.problemas.length > 0 && (
+                  <div className="px-5 pb-4 border-t border-gray-50 pt-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {modulo.problemas.map((p) => (
+                        <span
+                          key={p.id}
+                          className="text-xs bg-gray-50 border border-gray-100 text-gray-500 px-2 py-0.5 rounded-full"
+                        >
+                          P{p.numero}{p.nome ? ` — ${p.nome}` : ''}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Lista de alunos (colapsada) */}
+                {modulo.matriculas.length > 0 && (
+                  <div className="px-5 pb-4">
+                    <p className="text-xs text-gray-400 mb-1.5">Alunos matriculados:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {modulo.matriculas.slice(0, 8).map((mat) => (
+                        <span
+                          key={mat.usuario.id}
+                          className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full"
+                        >
+                          {mat.usuario.nome.split(' ')[0]}
+                        </span>
+                      ))}
+                      {modulo.matriculas.length > 8 && (
+                        <span className="text-xs text-gray-400 px-1">
+                          +{modulo.matriculas.length - 8} mais
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
+
+        {/* Aviso sobre exclusão */}
+        {modulos.length > 0 && (
+          <p className="text-xs text-gray-400 mt-4 text-center">
+            A exclusão remove permanentemente todos os dados do módulo, incluindo avaliações e notas.
+          </p>
+        )}
       </main>
     </div>
-  )
-}
-
-// Componente client-side para o botão Desarquivar
-function DesarquivarBtn({ moduloId }: { moduloId: string }) {
-  return (
-    <form
-      action={async () => {
-        'use server'
-        // Chama a API para desarquivar (ativo=true, arquivado=false)
-        const { auth: authFn } = await import('@/lib/auth')
-        const { prisma: db }   = await import('@/lib/db')
-        const session = await authFn()
-        if (!session || session?.user?.papel !== 'TUTOR') return
-
-        const modulo = await db.modulo.findUnique({ where: { id: moduloId } })
-        if (!modulo || modulo.tutorId !== session?.user?.id) return
-
-        await db.modulo.update({
-          where: { id: moduloId },
-          data:  { arquivado: false, ativo: true },
-        })
-      }}
-    >
-      <button
-        type="submit"
-        className="text-xs border border-green-500 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors"
-      >
-        Desarquivar
-      </button>
-    </form>
   )
 }
