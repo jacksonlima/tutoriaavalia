@@ -2,15 +2,9 @@
  * Notas da Tutoria v2 — Server Actions: Editar Módulo
  * Autor: Jackson Lima — CESUPA
  *
- * Implementa segurança em 3 camadas:
- * 1. Autenticação (está logado?)
- * 2. Autorização de papel (é TUTOR?)
- * 3. Ownership (é o titular deste módulo?)
- *
- * Lógica completa de reconciliação de alunos e atualização de nomes de problemas.
- *
- * FIX P2002: reordenação usa dois passos (offset temporário) para evitar
- * colisão na constraint unique(modulo_id, numero_na_turma).
+ * FIX P2002: reordenação usa UPDATE...CASE (uma query só) em vez de
+ * N updateMany() individuais — evita colisão na constraint e
+ * FIX P2028: evita transações longas com pgBouncer (Neon)
  */
 'use server'
 
@@ -78,81 +72,94 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
     )
   )
 
-  // 6. Transação: atualiza módulo, alunos e problemas
   try {
-    await prisma.$transaction(async (tx) => {
-
-      // 6a. Atualiza dados básicos do módulo
-      await tx.modulo.update({
-        where: { id: moduloId },
-        data:  { nome, ano, semestre: semestre ?? '01', tutoria, turma },
-      })
-
-      // 6b. Atualiza nomes dos problemas existentes
-      if (Array.isArray(nomesProblemas)) {
-        for (let i = 0; i < moduloNoBanco.problemas.length; i++) {
-          const prob    = moduloNoBanco.problemas[i]
-          const novoNome = (nomesProblemas[i] ?? '').trim()
-          await tx.problema.update({
-            where: { id: prob.id },
-            data:  { nome: novoNome || `Problema ${String(prob.numero).padStart(2, '0')}` },
-          })
-        }
-      }
-
-      // 6c. Reconciliar lista de alunos (add/remove)
-      const emailsAtuais    = moduloNoBanco.matriculas.map((m) => m.usuario.email)
-      const emailsDesejados = emailsAlunos.map((e) => e.toLowerCase().trim())
-
-      // Remove alunos que saíram da lista
-      const emailsRemover = emailsAtuais.filter((e) => !emailsDesejados.includes(e))
-      for (const email of emailsRemover) {
-        const mat = moduloNoBanco.matriculas.find((m) => m.usuario.email === email)
-        if (mat) {
-          await tx.matricula.deleteMany({ where: { moduloId, usuarioId: mat.usuario.id } })
-        }
-      }
-
-      // Adiciona alunos novos que ainda não têm matrícula
-      let proximoNumero    = moduloNoBanco.matriculas.length + 1
-      const emailsExistentes = emailsAtuais.filter((e) => emailsDesejados.includes(e))
-      for (const aluno of alunosNovos) {
-        if (!emailsExistentes.includes(aluno.email)) {
-          await tx.matricula.create({
-            data: { moduloId, usuarioId: aluno.id, numeraNaTurma: proximoNumero++ },
-          })
-        }
-      }
-
-      // 6d. Reordena numeraNaTurma conforme nova ordem da lista
-      //
-      // FIX P2002: usa dois passos para evitar colisão na constraint
-      // unique(modulo_id, numero_na_turma) durante a reordenação.
-      //
-      // Exemplo do problema:
-      //   Aluno A tem posição 2, Aluno B tem posição 3.
-      //   Professor move B para posição 2 (antes de A).
-      //   Se tentarmos direto: B = 2 → colide com A que ainda está em 2 → P2002.
-      //
-      // Solução: primeiro move todos para posições temporárias (offset + 1000),
-      // que não conflitam com ninguém, depois aplica as posições finais.
-
-      // Passo 1: posições temporárias (1001, 1002, ...)
-      for (let i = 0; i < alunosNovos.length; i++) {
-        await tx.matricula.updateMany({
-          where: { moduloId, usuarioId: alunosNovos[i].id },
-          data:  { numeraNaTurma: 1000 + i + 1 },
-        })
-      }
-
-      // Passo 2: posições finais (1, 2, 3, ...)
-      for (let i = 0; i < alunosNovos.length; i++) {
-        await tx.matricula.updateMany({
-          where: { moduloId, usuarioId: alunosNovos[i].id },
-          data:  { numeraNaTurma: i + 1 },
-        })
-      }
+    // 6a. Atualiza dados básicos do módulo
+    await prisma.modulo.update({
+      where: { id: moduloId },
+      data:  { nome, ano, semestre: semestre ?? '01', tutoria, turma },
     })
+
+    // 6b. Atualiza nomes dos problemas
+    if (Array.isArray(nomesProblemas)) {
+      for (let i = 0; i < moduloNoBanco.problemas.length; i++) {
+        const prob     = moduloNoBanco.problemas[i]
+        const novoNome = (nomesProblemas[i] ?? '').trim()
+        await prisma.problema.update({
+          where: { id: prob.id },
+          data:  { nome: novoNome || `Problema ${String(prob.numero).padStart(2, '0')}` },
+        })
+      }
+    }
+
+    // 6c. Reconciliar lista de alunos (add/remove)
+    const emailsAtuais    = moduloNoBanco.matriculas.map((m) => m.usuario.email)
+    const emailsDesejados = emailsAlunos.map((e) => e.toLowerCase().trim())
+
+    // Remove alunos que saíram da lista
+    const emailsRemover = emailsAtuais.filter((e) => !emailsDesejados.includes(e))
+    for (const email of emailsRemover) {
+      const mat = moduloNoBanco.matriculas.find((m) => m.usuario.email === email)
+      if (mat) {
+        await prisma.matricula.deleteMany({
+          where: { moduloId, usuarioId: mat.usuario.id },
+        })
+      }
+    }
+
+    // Adiciona alunos novos que ainda não têm matrícula
+    let proximoNumero      = moduloNoBanco.matriculas.length + 1
+    const emailsExistentes = emailsAtuais.filter((e) => emailsDesejados.includes(e))
+    for (const aluno of alunosNovos) {
+      if (!emailsExistentes.includes(aluno.email)) {
+        await prisma.matricula.create({
+          data: { moduloId, usuarioId: aluno.id, numeraNaTurma: proximoNumero++ },
+        })
+      }
+    }
+
+    // 6d. Reordena numeraNaTurma com UPDATE...CASE em UMA única query
+    //
+    // FIX P2002 + P2028:
+    // - Evita colisão de constraint (não há momento em que dois alunos
+    //   têm o mesmo número simultaneamente)
+    // - Uma query só → não sobrecarrega a transação do pgBouncer (Neon)
+    //
+    // SQL gerado:
+    //   UPDATE matriculas
+    //   SET numero_na_turma = CASE usuario_id
+    //     WHEN 'id1' THEN 1001   ← passo 1: offset temporário
+    //     WHEN 'id2' THEN 1002
+    //     ...
+    //   END
+    //   WHERE modulo_id = '...' AND usuario_id IN (...)
+    //
+    // Seguido de:
+    //   UPDATE ... SET numero_na_turma = numero_na_turma - 1000
+    //   WHERE modulo_id = '...' AND usuario_id IN (...)
+
+    if (alunosNovos.length > 0) {
+      const ids = alunosNovos.map((a) => a.id)
+
+      // Passo 1: move para offset temporário com UPDATE...CASE (1 query)
+      const casePasso1 = alunosNovos
+        .map((a, i) => `WHEN '${a.id}' THEN ${1000 + i + 1}`)
+        .join(' ')
+
+      await prisma.$executeRawUnsafe(`
+        UPDATE matriculas
+        SET numero_na_turma = CASE usuario_id ${casePasso1} END
+        WHERE modulo_id = '${moduloId}'
+          AND usuario_id IN (${ids.map((id) => `'${id}'`).join(',')})
+      `)
+
+      // Passo 2: subtrai o offset (1 query)
+      await prisma.$executeRawUnsafe(`
+        UPDATE matriculas
+        SET numero_na_turma = numero_na_turma - 1000
+        WHERE modulo_id = '${moduloId}'
+          AND usuario_id IN (${ids.map((id) => `'${id}'`).join(',')})
+      `)
+    }
 
     // 7. Invalida caches
     revalidatePath('/professor/dashboard')
