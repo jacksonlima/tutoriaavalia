@@ -3,22 +3,23 @@
  * Autor: Jackson Lima — CESUPA
  *
  * Implementa segurança em 3 camadas:
- *   1. Autenticação (está logado?)
- *   2. Autorização de papel (é TUTOR?)
- *   3. Ownership (é o titular deste módulo?)
+ * 1. Autenticação (está logado?)
+ * 2. Autorização de papel (é TUTOR?)
+ * 3. Ownership (é o titular deste módulo?)
  *
- * Lógica completa de reconciliação de alunos e atualização de nomes de problemas
- * — fiel ao comportamento original da API PUT /api/modulos/[id].
+ * Lógica completa de reconciliação de alunos e atualização de nomes de problemas.
+ *
+ * FIX P2002: reordenação usa dois passos (offset temporário) para evitar
+ * colisão na constraint unique(modulo_id, numero_na_turma).
  */
 'use server'
 
-import { auth }           from '@/lib/auth'
-import { prisma }         from '@/lib/db'
+import { auth }          from '@/lib/auth'
+import { prisma }        from '@/lib/db'
 import { revalidatePath } from 'next/cache'
-import { Papel }          from '@prisma/client'
-import { z }              from 'zod'
+import { Papel }         from '@prisma/client'
+import { z }             from 'zod'
 
-// Schema de validação inline para edição
 const editarSchema = z.object({
   nome:           z.string().min(3, 'Nome muito curto'),
   ano:            z.number().int().min(2020).max(2100),
@@ -30,18 +31,16 @@ const editarSchema = z.object({
 })
 
 export async function editarModuloAction(moduloId: string, dadosBrutos: unknown) {
-  // ── 1. Autenticação ────────────────────────────────────────────
+  // 1. Autenticação
   const session = await auth()
-  if (!session?.user) {
+  if (!session?.user)
     return { sucesso: false, erro: 'Você precisa fazer login.' }
-  }
 
-  // ── 2. Autorização de papel ────────────────────────────────────
-  if (session?.user?.papel !== 'TUTOR') {
+  // 2. Autorização de papel
+  if (session?.user?.papel !== 'TUTOR')
     return { sucesso: false, erro: 'Acesso negado: apenas professores podem editar módulos.' }
-  }
 
-  // ── 3. Ownership: verifica dono do módulo ─────────────────────
+  // 3. Ownership
   const moduloNoBanco = await prisma.modulo.findUnique({
     where:   { id: moduloId },
     include: {
@@ -53,16 +52,13 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
     },
   })
 
-  if (!moduloNoBanco) {
+  if (!moduloNoBanco)
     return { sucesso: false, erro: 'Módulo não encontrado.' }
-  }
 
-  // Apenas o titular pode editar — co-tutores têm acesso somente leitura
-  if (moduloNoBanco.tutorId !== session?.user?.id) {
+  if (moduloNoBanco.tutorId !== session?.user?.id)
     return { sucesso: false, erro: 'Acesso restrito: você não é o professor titular desta turma.' }
-  }
 
-  // ── 4. Validação Zod ──────────────────────────────────────────
+  // 4. Validação Zod
   const validacao = editarSchema.safeParse(dadosBrutos)
   if (!validacao.success) {
     const erros = validacao.error.flatten()
@@ -71,7 +67,7 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
 
   const { nome, ano, semestre, tutoria, turma, emailsAlunos, nomesProblemas } = validacao.data
 
-  // ── 5. Garante que todos os alunos existam no banco ───────────
+  // 5. Garante que todos os alunos existam no banco
   const alunosNovos = await Promise.all(
     emailsAlunos.map((email) =>
       prisma.usuario.upsert({
@@ -82,9 +78,10 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
     )
   )
 
-  // ── 6. Transação: atualiza módulo, alunos e problemas ────────
+  // 6. Transação: atualiza módulo, alunos e problemas
   try {
     await prisma.$transaction(async (tx) => {
+
       // 6a. Atualiza dados básicos do módulo
       await tx.modulo.update({
         where: { id: moduloId },
@@ -117,7 +114,7 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
       }
 
       // Adiciona alunos novos que ainda não têm matrícula
-      let proximoNumero = moduloNoBanco.matriculas.length + 1
+      let proximoNumero    = moduloNoBanco.matriculas.length + 1
       const emailsExistentes = emailsAtuais.filter((e) => emailsDesejados.includes(e))
       for (const aluno of alunosNovos) {
         if (!emailsExistentes.includes(aluno.email)) {
@@ -127,7 +124,28 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
         }
       }
 
-      // Reordena numeraNaTurma conforme nova ordem da lista
+      // 6d. Reordena numeraNaTurma conforme nova ordem da lista
+      //
+      // FIX P2002: usa dois passos para evitar colisão na constraint
+      // unique(modulo_id, numero_na_turma) durante a reordenação.
+      //
+      // Exemplo do problema:
+      //   Aluno A tem posição 2, Aluno B tem posição 3.
+      //   Professor move B para posição 2 (antes de A).
+      //   Se tentarmos direto: B = 2 → colide com A que ainda está em 2 → P2002.
+      //
+      // Solução: primeiro move todos para posições temporárias (offset + 1000),
+      // que não conflitam com ninguém, depois aplica as posições finais.
+
+      // Passo 1: posições temporárias (1001, 1002, ...)
+      for (let i = 0; i < alunosNovos.length; i++) {
+        await tx.matricula.updateMany({
+          where: { moduloId, usuarioId: alunosNovos[i].id },
+          data:  { numeraNaTurma: 1000 + i + 1 },
+        })
+      }
+
+      // Passo 2: posições finais (1, 2, 3, ...)
       for (let i = 0; i < alunosNovos.length; i++) {
         await tx.matricula.updateMany({
           where: { moduloId, usuarioId: alunosNovos[i].id },
@@ -136,7 +154,7 @@ export async function editarModuloAction(moduloId: string, dadosBrutos: unknown)
       }
     })
 
-    // ── 7. Invalida caches ────────────────────────────────────────
+    // 7. Invalida caches
     revalidatePath('/professor/dashboard')
     revalidatePath(`/professor/modulos/${moduloId}/editar`)
 
