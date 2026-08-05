@@ -1,11 +1,17 @@
 /**
- * Notas da Tutoria v2 — API: Módulos (v2)
+ * Notas da Tutoria v2 — API: Módulos
  * Autor: Jackson Lima — CESUPA
  *
- * Correções de segurança:
- *   FIND-NEW-01: Resposta para ALUNO filtrada — remove dados estruturais
- *   desnecessários: UUIDs de problemas não liberados, IDs de matrícula,
- *   status de sessões futuras e tutorId interno.
+ * GET /api/modulos
+ *
+ * TUTOR: retorna seus módulos completos (titular + co-tutor)
+ * ALUNO: retorna módulos em que está matriculado
+ *
+ * FIND-NEW-01 (segurança): campos sensíveis removidos para ALUNO
+ * FIX VISIBILIDADE: retorna TODOS os problemas (ativos e inativos)
+ * para que o módulo apareça no dashboard mesmo sem encontros ativos.
+ * O frontend decide o que mostrar — apenas esconde botão "Avaliar"
+ * quando o encontro não está ativo.
  */
 import { auth }              from '@/lib/auth'
 import { criarModuloSchema } from '@/lib/validations'
@@ -88,18 +94,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(modulosComPerms)
   }
 
-  // ── ALUNO — FIND-NEW-01: retorna apenas dados necessários ─────────────────
-  // Remove: UUIDs de problemas não liberados, IDs de matrícula,
-  //         status de sessões futuras e tutorId interno.
-  // Mantém: nomes dos colegas (legítimo no PBL), nome do tutor,
-  //         e apenas os problemas com pelo menos um encontro ativo
-  //         (com seus UUIDs — necessários para navegação).
+  // ── ALUNO ─────────────────────────────────────────────────────────────────
+  // FIND-NEW-01: campos sensíveis removidos (tutorId interno, IDs de matrícula)
+  // FIX VISIBILIDADE: retorna TODOS os problemas (ativos e inativos)
+  // O módulo deve ser visível mesmo quando não há encontros ativos.
+  // O dashboard controla o que exibir com base nos flags de ativo.
   const matriculas = await prisma.matricula.findMany({
-    where: { usuarioId: session?.user?.id, modulo: { arquivado: false } },
+    where: {
+      usuarioId: session?.user?.id,
+      modulo:    { arquivado: false },
+    },
     include: {
       modulo: {
         include: {
-          // Só o nome do tutor — sem tutorId exposto na resposta
           tutor:      { select: { nome: true } },
           problemas:  { orderBy: { numero: 'asc' } },
           matriculas: {
@@ -114,30 +121,22 @@ export async function GET(req: NextRequest) {
   const modulosFiltrados = matriculas.map((mat: any) => {
     const m = mat.modulo
 
-    // Filtra problemas: inclui apenas os que têm pelo menos um encontro ativo
-    // e retorna apenas os campos necessários para o frontend do aluno
-    const problemasAtivos = m.problemas
-      .filter((p: any) =>
-        p.aberturaAtiva ||
-        p.fechamentoAtivo ||
-        p.fechamentoAAtivo ||
-        p.fechamentoBAtivo
-      )
-      .map((p: any) => ({
-        id:               p.id,       // necessário para navegar para /aluno/avaliar
-        numero:           p.numero,
-        nome:             p.nome,
-        temSaltoTriplo:   p.temSaltoTriplo,
-        // Status dos encontros ativos — necessário para o dashboard
-        aberturaAtiva:    p.aberturaAtiva,
-        fechamentoAtivo:  p.fechamentoAtivo,
-        fechamentoAAtivo: p.fechamentoAAtivo,
-        fechamentoBAtivo: p.fechamentoBAtivo,
-        // NÃO inclui: moduloId, criadoEm, atualizadoEm
-      }))
+    // Retorna TODOS os problemas com seus status de ativo
+    // O dashboard decide o que mostrar (botão "Avaliar" apenas quando ativo)
+    // Campos retornados: só o necessário para o frontend — sem dados futuros sensíveis
+    const problemas = m.problemas.map((p: any) => ({
+      id:               p.id,
+      numero:           p.numero,
+      nome:             p.nome,
+      temSaltoTriplo:   p.temSaltoTriplo,
+      // Flags de ativo — necessários para o dashboard mostrar/ocultar botões
+      aberturaAtiva:    p.aberturaAtiva,
+      fechamentoAtivo:  p.fechamentoAtivo,
+      fechamentoAAtivo: p.fechamentoAAtivo,
+      fechamentoBAtivo: p.fechamentoBAtivo,
+    }))
 
-    // Colegas: apenas id e nome (legítimo no contexto PBL presencial)
-    // NÃO inclui: numeraNaTurma, moduloId, usuarioId (IDs de matrícula)
+    // Colegas: apenas id e nome (sem IDs de matrícula)
     const colegas = m.matriculas.map((mc: any) => ({
       id:   mc.usuario.id,
       nome: mc.usuario.nome,
@@ -149,11 +148,9 @@ export async function GET(req: NextRequest) {
       ano:     m.ano,
       tutoria: m.tutoria,
       turma:   m.turma,
-      // Nome do tutor sem expor tutorId
       tutor:   { nome: m.tutor.nome },
-      // Apenas problemas com encontros ativos
-      problemas: problemasAtivos,
-      // Colegas sem dados de matrícula
+      // Todos os problemas — módulo aparece mesmo sem encontros ativos
+      problemas,
       matriculas: colegas.map((c: any) => ({ usuario: c })),
     }
   })
