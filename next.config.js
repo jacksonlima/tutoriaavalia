@@ -1,109 +1,43 @@
 /** @type {import('next').NextConfig} */
 
-// ── Security Headers ─────────────────────────────────────────────────────────
 const securityHeaders = [
-  // ── Content-Security-Policy ──────────────────────────────────────────────
-  // Notas sobre unsafe-inline e unsafe-eval:
-  // - 'unsafe-inline' em script-src: necessário para o Next.js 16 (hidratação)
-  //   A solução definitiva é nonce-based CSP (refatoração futura)
-  // - 'unsafe-eval' em script-src: removido — testado sem quebrar o app
-  // - 'unsafe-inline' em style-src: necessário para Tailwind CSS
-  //   A solução definitiva é CSS-in-JS sem inline styles (refatoração futura)
-  // - frame-ancestors: adicionado (complementa X-Frame-Options, CSP3)
   {
     key:   'Content-Security-Policy',
     value: [
-      // default-src restritivo — bloqueia tudo não explicitamente permitido
       "default-src 'self'",
-      // Scripts: self + inline (Next.js hidratação) — SEM unsafe-eval
       "script-src 'self' 'unsafe-inline' https://accounts.google.com",
-      // Estilos: self + inline (Tailwind) + Google Fonts
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      // Fontes
       "font-src 'self' https://fonts.gstatic.com",
-      // Imagens: self + data URIs + Google avatars
       "img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com",
-      // Conexões: self + Google OAuth + Neon
       "connect-src 'self' https://accounts.google.com https://*.neon.tech",
-      // Frames: só Google OAuth popup
       "frame-src https://accounts.google.com",
-      // Bloqueia plugins (Flash, Java, etc.)
       "object-src 'none'",
-      // Restringe tag <base>
       "base-uri 'self'",
-      // Restringe onde formulários podem ser enviados
       "form-action 'self' https://accounts.google.com",
-      // CSP3: frame-ancestors — controle fino sobre quem pode enquadrar o site
-      // Mais específico que X-Frame-Options (que mantemos como fallback)
       "frame-ancestors 'none'",
-      // Bloqueia upgrade de requests HTTP para HTTPS
       "upgrade-insecure-requests",
     ].join('; '),
   },
-
-  // ── X-Frame-Options (fallback para browsers sem suporte a frame-ancestors) ─
-  {
-    key:   'X-Frame-Options',
-    value: 'DENY',
-  },
-
-  // ── HSTS — aumentado para 1 ano + preload + includeSubDomains ─────────────
-  // Antes: max-age=15768000 (6 meses), sem preload
-  // Agora: max-age=31536000 (1 ano) + preload + includeSubDomains
-  // Para submeter ao preload list: https://hstspreload.org/
-  {
-    key:   'Strict-Transport-Security',
-    value: 'max-age=31536000; includeSubDomains; preload',
-  },
-
-  // ── Cross-Origin isolation ────────────────────────────────────────────────
-  {
-    key:   'Cross-Origin-Embedder-Policy',
-    value: 'unsafe-none',
-  },
-  {
-    key:   'Cross-Origin-Opener-Policy',
-    value: 'same-origin-allow-popups',
-  },
-  {
-    key:   'Cross-Origin-Resource-Policy',
-    value: 'same-origin',
-  },
-
-  // ── Outros headers ────────────────────────────────────────────────────────
-  {
-    key:   'Permissions-Policy',
-    value: 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()',
-  },
-  {
-    key:   'X-Content-Type-Options',
-    value: 'nosniff',
-  },
-  {
-    key:   'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin',
-  },
-  {
-    key:   'X-Permitted-Cross-Domain-Policies',
-    value: 'none',
-  },
+  { key: 'X-Frame-Options',                value: 'DENY' },
+  // HSTS aplicado pelo Next.js — cobre tanto www quanto domínio raiz
+  { key: 'Strict-Transport-Security',      value: 'max-age=31536000; includeSubDomains; preload' },
+  { key: 'Cross-Origin-Embedder-Policy',   value: 'unsafe-none' },
+  { key: 'Cross-Origin-Opener-Policy',     value: 'same-origin-allow-popups' },
+  { key: 'Cross-Origin-Resource-Policy',   value: 'same-origin' },
+  { key: 'Permissions-Policy',             value: 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()' },
+  { key: 'X-Content-Type-Options',         value: 'nosniff' },
+  { key: 'Referrer-Policy',                value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
 ]
 
 const nextConfig = {
   poweredByHeader: false,
 
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname:  'lh3.googleusercontent.com',
-      },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: 'lh3.googleusercontent.com' }],
   },
 
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  typescript: { ignoreBuildErrors: true },
 
   allowedDevOrigins: [
     '*.ngrok-free.app',
@@ -113,6 +47,22 @@ const nextConfig = {
   ],
 
   serverExternalPackages: ['@prisma/client', 'prisma'],
+
+  // ── Redirect: domínio raiz → www (com HSTS aplicado pelo Next.js) ────────
+  // Quando notasdatutoria.com.br é um "alias" na Vercel (não redirect),
+  // o Next.js processa a requisição e aplica os headers ANTES do redirect.
+  // Isso permite que o HSTS com includeSubDomains; preload seja enviado
+  // no domínio raiz, tornando-o elegível para o HSTS preload list.
+  async redirects() {
+    return [
+      {
+        source:      '/:path*',
+        has:         [{ type: 'host', value: 'notasdatutoria.com.br' }],
+        destination: 'https://www.notasdatutoria.com.br/:path*',
+        permanent:   true,
+      },
+    ]
+  },
 
   async headers() {
     return [
