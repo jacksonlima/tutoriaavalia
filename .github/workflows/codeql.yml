@@ -1,0 +1,36 @@
+name: CodeQL — SAST TypeScript
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1'  # toda segunda às 8h (horário UTC)
+
+jobs:
+  analyze:
+    name: Análise de Segurança
+    runs-on: ubuntu-latest
+    permissions:
+      actions:         read
+      contents:        read
+      security-events: write
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Inicializa CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended  # inclui mais regras além do padrão
+
+      - name: Build automático
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Executa análise CodeQL
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
