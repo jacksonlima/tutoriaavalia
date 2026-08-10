@@ -4,11 +4,13 @@
  *
  * POST /api/direitos
  * Recebe solicitações de exercício de direitos (LGPD Art. 18°).
- * Registra no banco e envia notificação ao DPO.
  *
  * CORREÇÕES CodeQL:
- *   js/polynomial-redos: regex de email substituída por z.string().email()
- *   js/log-injection (×2): dados do usuário sanitizados antes de logar
+ *   js/polynomial-redos: regex de email → z.string().email()
+ *   js/log-injection ×2: PII removida dos logs de console
+ *     → nome, email e descrição NÃO são logados (são PII)
+ *     → apenas protocolo, tipo (validado) e timestamp vão para o log
+ *     → dados completos devem ser salvos em tabela de auditoria no banco
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -16,13 +18,7 @@ import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
-const TIPOS_VALIDOS = ['acesso', 'correcao', 'exclusao', 'portabilidade', 'oposicao', 'outro']
-
-// ── Helper: remove quebras de linha de dados antes de logar ───────────────────
-// Fix js/log-injection (CWE-117): impede que usuário forge entradas de log
-// injetando \n ou \r para criar linhas falsas no log de auditoria.
-const sanitizeLog = (s: unknown): string =>
-  String(s ?? '').replace(/[\r\n\t]/g, ' ').trim()
+const TIPOS_VALIDOS = ['acesso', 'correcao', 'exclusao', 'portabilidade', 'oposicao', 'outro'] as const
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +32,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Valida tipo contra lista fixa (sem input do usuário no log)
     if (!TIPOS_VALIDOS.includes(tipo)) {
       return NextResponse.json(
         { error: 'Tipo de solicitação inválido' },
@@ -43,9 +40,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Fix js/polynomial-redos: substituí regex manual vulnerável a ReDoS
-    // pela validação do Zod (z.string().email()) que usa algoritmo linear.
-    // Regex anterior: /^[^\@]+@[^\@]+\.[^\@]+$/  ← quadratic backtracking
+    // Fix js/polynomial-redos: z.string().email() usa algoritmo linear
+    // Regex anterior /^[^\@]+@[^\@]+\.[^\@]+$/ era vulnerável a ReDoS
     const emailResult = z.string().email().safeParse(email)
     if (!emailResult.success) {
       return NextResponse.json(
@@ -56,21 +52,25 @@ export async function POST(req: NextRequest) {
 
     const protocolo = `LGPD-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
 
-    // Fix js/log-injection: sanitizeLog() remove \r e \n de todos os campos
-    // fornecidos pelo usuário antes de incluí-los nas entradas de log.
-    console.log(
-      `[LGPD][DIREITOS] ${protocolo} | tipo=${sanitizeLog(tipo)} | nome=${sanitizeLog(nome)} | email=${sanitizeLog(email)} | ${new Date().toISOString()}`
-    )
-    console.log(`[LGPD][DIREITOS] Descrição: ${sanitizeLog(descricao.slice(0, 200))}`)
+    // Fix js/log-injection: PII (nome, email, descrição) NÃO é logada.
+    // Apenas dados não controlados pelo usuário vão para o console:
+    //   - protocolo: gerado pelo servidor (Math.random + Date.now)
+    //   - tipo: validado contra TIPOS_VALIDOS (lista fixa)
+    //   - timestamp: gerado pelo servidor
+    // Dados completos devem ser salvos em tabela de auditoria no banco.
+    console.log(`[LGPD][DIREITOS] protocolo=${protocolo} | tipo=${tipo} | ${new Date().toISOString()}`)
 
-    // Em produção, aqui enviaria e-mail para jackson.lima@prof.cesupa.br
-    // usando Resend, SendGrid, ou Nodemailer configurado com SMTP institucional
-    // Exemplo com Resend:
+    // TODO (produção): salvar em tabela de auditoria LGPD no banco
+    // await prisma.solicitacaoLgpd.create({
+    //   data: { protocolo, tipo, nome, email, descricao, criadoEm: new Date() }
+    // })
+
+    // TODO (produção): notificar DPO por e-mail
     // await resend.emails.send({
-    //   from: 'noreply@notasdatutoria.com.br',
-    //   to:   'jackson.lima@prof.cesupa.br',
+    //   from:    'noreply@notasdatutoria.com.br',
+    //   to:      'jackson.lima@prof.cesupa.br',
     //   subject: `[LGPD] ${tipo} — ${protocolo}`,
-    //   text: `Nome: ${nome}\nEmail: ${email}\nTipo: ${tipo}\nDescrição: ${descricao}`,
+    //   text:    `Nome: ${nome}\nEmail: ${email}\nTipo: ${tipo}\nDescrição: ${descricao}`,
     // })
 
     return NextResponse.json({ sucesso: true, protocolo })
